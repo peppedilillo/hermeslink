@@ -1,0 +1,72 @@
+services:
+  nginx:
+    build: ./nginx
+    ports:
+      # we will deliver over port 1337.
+      # if you change this port, you should also remember to change
+      # `CSRF_TRUSTED_ORIGINS` in `settings.py`.
+      - 1337:80
+    volumes:
+      - static_volume:/home/app/static/staticfiles
+      - media_volume:/home/app/static/mediafiles
+    depends_on:
+      - web
+
+  web:
+    env_file:
+      - .django.env.prod
+    build: 
+      context: ./django/hhelm
+      dockerfile: Dockerfile.prod
+    expose:
+      - 8000
+    command:  >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn hhelm.wsgi:application --bind 0.0.0.0:8000"
+    volumes:
+      - sqlite:/home/app/db/
+      - static_volume:/home/app/static/staticfiles
+      - media_volume:/home/app/static/mediafiles
+
+  influxdb2:
+    env_file: ".influxdb.env"
+    image: influxdb:2.7
+    expose:
+      - 8086
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+    volumes:
+      - ./influxdb/scripts:/docker-entrypoint-initdb.d
+      - influxdb2-data:/var/lib/influxdb2
+  
+  grafana:
+    depends_on:
+      - influxdb2
+    env_file:
+      - ".grafana.env"
+      - ".influxdb.env"
+    image: grafana/grafana:11.5.1
+    expose:
+      - 3000
+    environment:
+      GF_LOG_LEVEL: WARNING
+      GF_SERVER_ROOT_URL: http://localhost:1337/grafana
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/dashboards:/etc/grafana/dashboards
+
+  data-generator:
+    build: 
+      context: ./data-generator
+    depends_on:
+      - influxdb2
+    env_file: ".influxdb.env"
+    restart: unless-stopped
+
+volumes:
+  sqlite:
+  static_volume:
+  media_volume:
+  influxdb2-data:

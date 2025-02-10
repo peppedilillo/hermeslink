@@ -1,0 +1,14 @@
+services:
+  web:
+    build: ./django/hhelm
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./django/hhelm:/home/app/web
+      - ./django/dev/db:/home/app/db/
+      - ./django/dev/mediafiles:/home/app/static/mediafiles
+    ports:
+      - 8000:8000
+    env_file:
+      - ./.django.env

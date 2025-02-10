@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block content %}
+  {% include "navbar.html" %}
+
+  Welcome to hhelm! Go to <a href="/grafana/d/sensor-data">dashboard</a> or try <a href="{% url 'upload' %}">upload</a> a file.
+
+{% endblock %}
