@@ -21,8 +21,7 @@ services:
     expose:
       - 8000
     command:  >
-      sh -c "python manage.py migrate &&
-             python manage.py collectstatic --noinput &&
+      sh -c "python manage.py collectstatic --noinput &&
              gunicorn hhelm.wsgi:application --bind 0.0.0.0:8000"
     volumes:
       - sqlite:/home/app/db/

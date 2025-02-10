@@ -2,7 +2,7 @@
     <p>
         {% if user.is_authenticated %}
             Hello {{ user.get_username }}!
-            (<a href="{% url 'logout' %}">logout</a>)
+            (<a href="{% url 'accounts:logout' %}">logout</a>)
         {% else %}
             Hello unknown user, <a href="{% url 'login' %}">login</a> here.
         {% endif %}

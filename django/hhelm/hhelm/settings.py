@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # p. custom apps
     "main",
-    "users",
+    "accounts",
     "configs",
 ]
 
@@ -116,7 +116,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
@@ -124,6 +123,10 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+
+# p: custom user model
+AUTH_USER_MODEL = "accounts.CustomUser"
+
 # p. The environment variable `STATIC_DIR` is defined in dockerfile.
 STATIC_ROOT = Path(os.environ.get("STATIC_DIR"))
 

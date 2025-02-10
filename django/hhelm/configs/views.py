@@ -2,7 +2,6 @@ from django.shortcuts import render
 from django.core.files.storage import FileSystemStorage
 from django.contrib.auth.decorators import login_required
 
-from hhelm.settings import MEDIA_ROOT, MEDIA_URL, DEBUG
 
 @login_required
 def image_upload(request):

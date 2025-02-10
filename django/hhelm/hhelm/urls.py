@@ -19,12 +19,11 @@ from django.urls import path
 from django.urls import include
 from django.conf import settings
 from django.conf.urls.static import static
-from main.views import index
-from configs.views import image_upload
 
 urlpatterns = [
-    path("", index, name="index"),
-    path("upload/", image_upload, name="upload"),
+    path("", include("main.urls")),
+    path("configs/", include("configs.urls")),
+    path("accounts/", include("accounts.urls")),
     path('accounts/', include('django.contrib.auth.urls')),
     path('admin/', admin.site.urls),
 ]

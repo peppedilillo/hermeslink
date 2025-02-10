@@ -3,7 +3,7 @@
   {% include "navbar.html" %}
 
   <p>Upload a file here:</p>
-  <form action="{% url "upload" %}" method="post" enctype="multipart/form-data">
+  <form action="{% url "configs:image_upload" %}" method="post" enctype="multipart/form-data">
     {% csrf_token %}
     <input type="file" name="image_file">
     <input type="submit" value="submit" />
@@ -14,6 +14,6 @@
   {% endif %}
 
   <p>
-    Go back to <a href="{% url 'index' %}">homepage</a>.
+    Go back to <a href="{% url 'main:index' %}">homepage</a>.
   </p>
 {% endblock %}
