@@ -13,21 +13,6 @@ from hermes import CONFIG_TYPES
 
 
 @login_required
-def image_upload(request):
-    if request.method == "POST" and request.FILES["image_file"]:
-        image_file = request.FILES["image_file"]
-        fs = FileSystemStorage()
-        filename = fs.save(image_file.name, image_file)
-        image_url = fs.url(filename)
-        return render(
-            request,
-            "configs/upload.html",
-            {"image_url": image_url},
-        )
-    return render(request, "configs/upload_image.html")
-
-
-@login_required
 def upload(request: HttpRequest) -> HttpResponse:
     """
     This view is intended to accept configuration files for a target model
@@ -58,6 +43,11 @@ def upload(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def test(request: HttpRequest) -> HttpResponse:
+    """
+    This view displays the configuration files just uploaded and the results of the
+    sanity checks performed on them. If the sanity checks pass without errors, it
+    displays a "next" button, otherwise it displays a "go back to upload" button.
+    """
     if "config_files" not in request.session or "config_model" not in request.session:
         return redirect('configs:new')
 

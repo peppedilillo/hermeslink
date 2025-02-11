@@ -5,6 +5,11 @@ from typing import Dict
 
 
 def filepath_to_bitdict_asic(filepath: Path) -> Dict[str, str]:
+    """
+    Takes an asic configuration file and transforms it into a dictionary of strings.
+    The dictionary has key for different quadrants, and binary (01 format) strings
+    for values.
+    """
     with open(filepath, "rb") as f:
         return {quad: "".join([format(b, "08b") for b in f.read(31)]) for quad in "ABCD"}
 
@@ -19,6 +24,22 @@ _SLICES_ASIC = {
 
 
 def parse_bitdict_asic(bitdict: Dict[str, str]) -> Dict[str, Dict[str, str]]:
+    """
+    Transforms a asic configuration dictionary into a nested dictionary representing
+    a parsed asic configuration. Inner keys represent different sections of the
+    asic configuration.
+
+    Example Output:
+        {
+            "A": {
+                "tests": "..",
+                "trigger_logic": "..",
+                "discriminators": ".."},
+                ..
+            },
+            "B": ..
+        }
+    """
     return {
         q: {
             k: reduce(lambda x, s: x[s], slices, bitdict[q])

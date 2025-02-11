@@ -26,6 +26,7 @@ def test_asic1_unbounded_discriminators_are_off(
         asic1_bitdict: dict,
         model: Literal[*payloads.NAMES],
 ) -> TestResult:
+    # useful for making sure we are not passing asic configurations for a different payload.
     warn_about_channels = []
     for q, qmap in payloads.MAPS[model].items():
         assert len(asic1_bitdict[q]["discriminators"]) == len(qmap)
@@ -45,6 +46,7 @@ def test_asic0_trigger_logic_is_internal_or(
         asic0_bitdict: dict,
         model: Literal[*payloads.NAMES],
 ) -> TestResult:
+    # if trigger logic is not set to internal or, the configuration is not asic0
     warn_about_quadrants = []
     for q in payloads.MAPS[model].keys():
         if asic0_bitdict[q]["trigger_logic"] != "10":
@@ -58,10 +60,11 @@ def test_asic0_trigger_logic_is_internal_or(
     return TestResult(Status.PASSED, "Trigger logic is set to `internal or`.")
 
 
-def test_asic1_trigger_logic_is_external_single(
+def test_asic1_trigger_logic_is_internal_single(
         asic0_bitdict: dict,
         model: Literal[*payloads.NAMES],
 ) -> TestResult:
+    # if trigger logic is not set to internal single, the configuration is not asic1
     warn_about_quadrants = []
     for q in payloads.MAPS[model].keys():
         if asic0_bitdict[q]["trigger_logic"] != "01":
@@ -78,6 +81,7 @@ def test_asic1_trigger_logic_is_external_single(
 def test_acq_size(
         filepath: Path,
 ) -> TestResult:
+    # we double check size both to be extra-sure and for displaying purpose
     if (size_bytes := os.path.getsize(filepath)) != 20:
         return TestResult(Status.ERROR, f"File size is {size_bytes} bytes. Expected 20 bytes.")
     return TestResult(Status.PASSED, "File size is 20 bytes as expected.")
@@ -86,6 +90,7 @@ def test_acq_size(
 def test_asic_size(
         filepath: Path,
 ) -> TestResult:
+    # we double check size both to be extra-sure and for displaying purpose
     if (size_bytes := os.path.getsize(filepath)) != 124:
         return TestResult(Status.ERROR, f"File size is {size_bytes} bytes. Expected 124 bytes.")
     return TestResult(Status.PASSED, "File size is 124 bytes as expected.")
@@ -94,12 +99,14 @@ def test_asic_size(
 def test_bee_size(
         filepath: Path,
 ) -> TestResult:
+    # we double check size both to be extra-sure and for displaying purpose
     if (size_bytes := os.path.getsize(filepath)) != 64:
         return TestResult(Status.ERROR, f"File size is {size_bytes} bytes. Expected 64 bytes.")
     return TestResult(Status.PASSED, "File size is 64 bytes as expected.")
 
 
 def serialize(tr: TestResult):
+    # since we are going to display results in a template, we need them to be serializable
     return {"status": tr.status.name, "message": tr.message}
 
 
@@ -107,6 +114,9 @@ def validate_configuration(
         filesdict: Dict[str, Path],
         model: Literal[*payloads.NAMES],
 ) -> tuple[Dict[str, List[tuple[str, str]]], bool]:
+    """
+    Validates a configuration and returns test results and a boolean pass.
+    """
     asic1_bitdict = parse_bitdict_asic(filepath_to_bitdict_asic(filesdict["asic1"]))
     asic0_bitdict = parse_bitdict_asic(filepath_to_bitdict_asic(filesdict["asic0"]))
     test_results = {
@@ -119,7 +129,7 @@ def validate_configuration(
         "asic1": [
             test_asic_size(filesdict["asic1"]),
             test_asic1_unbounded_discriminators_are_off(asic1_bitdict, model),
-            test_asic1_trigger_logic_is_external_single(asic1_bitdict, model),
+            test_asic1_trigger_logic_is_internal_single(asic1_bitdict, model),
         ],
         "asic0": [
             test_asic_size(filesdict["asic0"]),
