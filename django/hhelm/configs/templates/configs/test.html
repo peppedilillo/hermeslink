@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+{% include "navbar.html" %}
+
+<h2>Upload overview</h2>
+{% for file, content in contents.items %}
+    <h3>{{ file }}</h3>
+    <div style="word-wrap: break-word; max-width: 80ch;">0x{{ content }}</div>
+{% endfor %}
+    
+<h2>Test Results</h2>
+{% for file, tests in results.items %}
+    <h3>{{ file }}</h3>
+    <p> {{ contents.file }} </p>
+    <p>
+        {% for test in tests %}
+            <ul>
+                <li>test {{ test.status }}: {{ test.message }}</li>
+            </ul>
+        {% endfor %}
+    </p>
+{% endfor %}
+    
+{% if can_proceed %}
+    <form method="post" action="{% url 'configs:deliver' %}">
+        {% csrf_token %}
+        <button type="submit">Next</button>
+    </form>
+{% else %}
+    <form method="get" action="{% url 'configs:upload' %}">
+        <button type="submit">Go back to upload</button>
+    </form>
+{% endif %}
+    
+{% endblock %}

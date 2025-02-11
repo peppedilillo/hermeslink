@@ -1,0 +1,28 @@
+from pathlib import Path
+from functools import reduce
+
+from typing import Dict
+
+
+def filepath_to_bitdict_asic(filepath: Path) -> Dict[str, str]:
+    with open(filepath, "rb") as f:
+        return {quad: "".join([format(b, "08b") for b in f.read(31)]) for quad in "ABCD"}
+
+
+_SLICES_ASIC = {
+    "tests": [slice(0, 32), slice(None, None, -1)],
+    "trigger_logic": [slice(32, 34)],  # no reversal needed
+    "discriminators": [slice(56, 88), slice(None, None, -1)],
+    "prestatus": [slice(88, 120), slice(None, None, -1)],
+    "fine_thresholds": [slice(120, 248), slice(None, None, -1)],
+}
+
+
+def parse_bitdict_asic(bitdict: Dict[str, str]) -> Dict[str, Dict[str, str]]:
+    return {
+        q: {
+            k: reduce(lambda x, s: x[s], slices, bitdict[q])
+            for k, slices in _SLICES_ASIC.items()
+        }
+        for q in "ABCD"
+    }

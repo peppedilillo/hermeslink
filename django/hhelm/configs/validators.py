@@ -1,0 +1,133 @@
+from dataclasses import dataclass
+from enum import Enum
+from telnetlib import STATUS
+from typing import Dict, List, Literal
+import os
+
+from pathlib import Path
+
+from hermes.configs import parse_bitdict_asic, filepath_to_bitdict_asic
+from hermes import payloads as payloads
+
+
+class Status(Enum):
+    PASSED = 0
+    WARNING = 1
+    ERROR = 2
+
+
+@dataclass
+class TestResult:
+    status: Status
+    message: str
+
+
+def test_asic1_unbounded_discriminators_are_off(
+        asic1_bitdict: dict,
+        model: Literal[*payloads.NAMES],
+) -> TestResult:
+    warn_about_channels = []
+    for q, qmap in payloads.MAPS[model].items():
+        assert len(asic1_bitdict[q]["discriminators"]) == len(qmap)
+        for ch, (bit, channel_mapping) in enumerate(zip(asic1_bitdict[q]["discriminators"], qmap)):
+            if channel_mapping == payloads.UNBOND and not int(bit):  # 0 is for enabled discriminator
+                warn_about_channels.append((q, ch))
+    if warn_about_channels:
+        return TestResult(
+            Status.WARNING,
+            f"Discriminator are set on for unbonded channel{'s' if len(warn_about_channels) > 1 else ''} "
+            f"{', '.join(map(lambda x: ''.join(map(str, x)), warn_about_channels))}."
+        )
+    return TestResult(Status.PASSED, "All unbonded channels discriminators are off.")
+
+
+def test_asic0_trigger_logic_is_internal_or(
+        asic0_bitdict: dict,
+        model: Literal[*payloads.NAMES],
+) -> TestResult:
+    warn_about_quadrants = []
+    for q in payloads.MAPS[model].keys():
+        if asic0_bitdict[q]["trigger_logic"] != "10":
+            warn_about_quadrants.append(q)
+    if warn_about_quadrants:
+        return TestResult(
+            Status.WARNING,
+            f"Trigger logic not set to `internal or` for quadrant{'s' if len(warn_about_quadrants) > 1 else ''}. "
+            f"{', '.join(warn_about_quadrants)}."
+        )
+    return TestResult(Status.PASSED, "Trigger logic is set to `internal or`.")
+
+
+def test_asic1_trigger_logic_is_external_single(
+        asic0_bitdict: dict,
+        model: Literal[*payloads.NAMES],
+) -> TestResult:
+    warn_about_quadrants = []
+    for q in payloads.MAPS[model].keys():
+        if asic0_bitdict[q]["trigger_logic"] != "01":
+            warn_about_quadrants.append(q)
+    if warn_about_quadrants:
+        return TestResult(
+            Status.WARNING,
+            f"Trigger logic not set to `internal single` for quadrant{'s' if len(warn_about_quadrants) > 1 else ''}. "
+            f"{', '.join(warn_about_quadrants)}."
+        )
+    return TestResult(Status.PASSED, "Trigger logic is set to `internal single`.")
+
+
+def test_acq_size(
+        filepath: Path,
+) -> TestResult:
+    if (size_bytes := os.path.getsize(filepath)) != 20:
+        return TestResult(Status.ERROR, f"File size is {size_bytes} bytes. Expected 20 bytes.")
+    return TestResult(Status.PASSED, "File size is 20 bytes as expected.")
+
+
+def test_asic_size(
+        filepath: Path,
+) -> TestResult:
+    if (size_bytes := os.path.getsize(filepath)) != 124:
+        return TestResult(Status.ERROR, f"File size is {size_bytes} bytes. Expected 124 bytes.")
+    return TestResult(Status.PASSED, "File size is 124 bytes as expected.")
+
+
+def test_bee_size(
+        filepath: Path,
+) -> TestResult:
+    if (size_bytes := os.path.getsize(filepath)) != 64:
+        return TestResult(Status.ERROR, f"File size is {size_bytes} bytes. Expected 64 bytes.")
+    return TestResult(Status.PASSED, "File size is 64 bytes as expected.")
+
+
+def serialize(tr: TestResult):
+    return {"status": tr.status.name, "message": tr.message}
+
+
+def validate_configuration(
+        filesdict: Dict[str, Path],
+        model: Literal[*payloads.NAMES],
+) -> tuple[Dict[str, List[tuple[str, str]]], bool]:
+    asic1_bitdict = parse_bitdict_asic(filepath_to_bitdict_asic(filesdict["asic1"]))
+    asic0_bitdict = parse_bitdict_asic(filepath_to_bitdict_asic(filesdict["asic0"]))
+    test_results = {
+        "acq": [
+            test_acq_size(filesdict["acq"]),
+        ],
+        "acq0": [
+            test_acq_size(filesdict["acq0"]),
+        ],
+        "asic1": [
+            test_asic_size(filesdict["asic1"]),
+            test_asic1_unbounded_discriminators_are_off(asic1_bitdict, model),
+            test_asic1_trigger_logic_is_external_single(asic1_bitdict, model),
+        ],
+        "asic0": [
+            test_asic_size(filesdict["asic0"]),
+            test_asic0_trigger_logic_is_internal_or(asic0_bitdict, model),
+        ],
+        "bee": [
+            test_bee_size(filesdict["bee"]),
+        ],
+    }
+    can_proceed = not any([r.status == Status.ERROR for k, v in test_results.items() for r in v ])
+    return {k: [*map(serialize, v)] for k, v in test_results.items()}, can_proceed
