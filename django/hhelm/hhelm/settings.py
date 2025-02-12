@@ -140,6 +140,17 @@ CSRF_TRUSTED_ORIGINS = ["http://localhost:1337"]
 # p. sets login url to index instead of profile page
 LOGIN_REDIRECT_URL = '/'
 
+# p. default configs email recipient
+EMAIL_CONFIGS_RECIPIENT = "giuseppe.dilillo@inaf.it"
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get("EMAIL_HOST")
+EMAIL_PORT = os.environ.get("EMAIL_PORT")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
+EMAIL_USE_TLS = bool(int(os.environ.get("EMAIL_USE_TLS", default=1)))
+EMAIL_USE_SSL = bool(int(os.environ.get("EMAIL_USE_SSL", default=0)))
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 

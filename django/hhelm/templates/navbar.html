@@ -1,5 +1,6 @@
 <div>
     <p>
+        <a href="{% url 'main:index' %}">Home</a> |
         {% if user.is_authenticated %}
             Hello {{ user.get_username }}!
             (<a href="{% url 'accounts:logout' %}">logout</a>)

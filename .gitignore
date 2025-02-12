@@ -180,3 +180,4 @@ cython_debug/
 .idea
 .DS_Store
 django/dev/
+**/repomix-output.txt
