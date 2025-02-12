@@ -2,6 +2,7 @@
 {% block content %}
   {% include "navbar.html" %}
 
-  Welcome to hhelm! Go to <a href="/grafana/d/sensor-data">dashboard</a> or try <a href="{% url 'configs:upload' %}">upload</a> a file.
+  <h1>Welcome</h1>
+    <p>Go to <a href="/grafana/d/sensor-data">dashboard</a> or try <a href="{% url 'configs:upload' %}">upload</a> a file.</p>
 
 {% endblock %}

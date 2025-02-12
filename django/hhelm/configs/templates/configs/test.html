@@ -12,13 +12,11 @@
 {% for file, tests in results.items %}
     <h3>{{ file }}</h3>
     <p> {{ contents.file }} </p>
-    <p>
-        {% for test in tests %}
-            <ul>
-                <li>test {{ test.status }}: {{ test.message }}</li>
-            </ul>
-        {% endfor %}
-    </p>
+    {% for test in tests %}
+        <ul>
+            <li>test {{ test.status }}: {{ test.message }}</li>
+        </ul>
+    {% endfor %}
 {% endfor %}
     
 {% if can_proceed %}

@@ -1,11 +1,15 @@
-<div>
-    <p>
-        <a href="{% url 'main:index' %}">Home</a> |
-        {% if user.is_authenticated %}
-            Hello {{ user.get_username }}!
-            (<a href="{% url 'accounts:logout' %}">logout</a>)
-        {% else %}
-            Hello unknown user, <a href="{% url 'login' %}">login</a> here.
-        {% endif %}
-    </p>
+<div class="navbar">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="nav-links">
+            <a href="{% url 'main:index' %}">Home</a>
+        </div>
+        <div class="user-info">
+            {% if user.is_authenticated %}
+                <span>Hello {{ user.get_username }}!</span>
+                (<a href="{% url 'accounts:logout' %}">logout</a>)
+            {% else %}
+                <a href="{% url 'login' %}">login</a>
+            {% endif %}
+        </div>
+    </div>
 </div>
