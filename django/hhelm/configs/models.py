@@ -1,6 +1,5 @@
 from django.core.validators import MinLengthValidator
 from django.db import models
-
 from hhelm.settings import AUTH_USER_MODEL
 
 CustomUser = AUTH_USER_MODEL
@@ -14,6 +13,7 @@ class Configuration(models.Model):
     The upload field is inteded to be modified later, once we get a confirmation
     on the uploaded status, which should supposedly come with a timestamp (`upload_time`)
     """
+
     MODELS = (
         ("1", "H1"),
         ("2", "H2"),

@@ -1,6 +1,5 @@
-from pathlib import Path
 from functools import reduce
-
+from pathlib import Path
 from typing import Dict
 
 
@@ -40,10 +39,4 @@ def parse_bitdict_asic(bitdict: Dict[str, str]) -> Dict[str, Dict[str, str]]:
             "B": ..
         }
     """
-    return {
-        q: {
-            k: reduce(lambda x, s: x[s], slices, bitdict[q])
-            for k, slices in _SLICES_ASIC.items()
-        }
-        for q in "ABCD"
-    }
+    return {q: {k: reduce(lambda x, s: x[s], slices, bitdict[q]) for k, slices in _SLICES_ASIC.items()} for q in "ABCD"}

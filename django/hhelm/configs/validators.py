@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 from enum import Enum
+import os
+from pathlib import Path
 from telnetlib import STATUS
 from typing import Dict, List, Literal
-import os
 
-from pathlib import Path
-
-from hermes.configs import parse_bitdict_asic, filepath_to_bitdict_asic
 from hermes import payloads as payloads
+from hermes.configs import filepath_to_bitdict_asic
+from hermes.configs import parse_bitdict_asic
 
 
 class Status(Enum):
@@ -23,8 +23,8 @@ class TestResult:
 
 
 def test_asic1_unbounded_discriminators_are_off(
-        asic1_bitdict: dict,
-        model: Literal[*payloads.NAMES],
+    asic1_bitdict: dict,
+    model: Literal[*payloads.NAMES],
 ) -> TestResult:
     # useful for making sure we are not passing asic configurations for a different payload.
     warn_about_channels = []
@@ -37,14 +37,14 @@ def test_asic1_unbounded_discriminators_are_off(
         return TestResult(
             Status.WARNING,
             f"Discriminator are set on for unbonded channel{'s' if len(warn_about_channels) > 1 else ''} "
-            f"{', '.join(map(lambda x: ''.join(map(str, x)), warn_about_channels))}."
+            f"{', '.join(map(lambda x: ''.join(map(str, x)), warn_about_channels))}.",
         )
     return TestResult(Status.PASSED, "All unbonded channels discriminators are off.")
 
 
 def test_asic0_trigger_logic_is_internal_or(
-        asic0_bitdict: dict,
-        model: Literal[*payloads.NAMES],
+    asic0_bitdict: dict,
+    model: Literal[*payloads.NAMES],
 ) -> TestResult:
     # if trigger logic is not set to internal or, the configuration is not asic0
     warn_about_quadrants = []
@@ -55,14 +55,14 @@ def test_asic0_trigger_logic_is_internal_or(
         return TestResult(
             Status.WARNING,
             f"Trigger logic not set to `internal or` for quadrant{'s' if len(warn_about_quadrants) > 1 else ''}. "
-            f"{', '.join(warn_about_quadrants)}."
+            f"{', '.join(warn_about_quadrants)}.",
         )
     return TestResult(Status.PASSED, "Trigger logic is set to `internal or`.")
 
 
 def test_asic1_trigger_logic_is_internal_single(
-        asic0_bitdict: dict,
-        model: Literal[*payloads.NAMES],
+    asic0_bitdict: dict,
+    model: Literal[*payloads.NAMES],
 ) -> TestResult:
     # if trigger logic is not set to internal single, the configuration is not asic1
     warn_about_quadrants = []
@@ -73,13 +73,13 @@ def test_asic1_trigger_logic_is_internal_single(
         return TestResult(
             Status.WARNING,
             f"Trigger logic not set to `internal single` for quadrant{'s' if len(warn_about_quadrants) > 1 else ''}. "
-            f"{', '.join(warn_about_quadrants)}."
+            f"{', '.join(warn_about_quadrants)}.",
         )
     return TestResult(Status.PASSED, "Trigger logic is set to `internal single`.")
 
 
 def test_acq_size(
-        filepath: Path,
+    filepath: Path,
 ) -> TestResult:
     # we double check size both to be extra-sure and for displaying purpose
     if (size_bytes := os.path.getsize(filepath)) != 20:
@@ -88,7 +88,7 @@ def test_acq_size(
 
 
 def test_asic_size(
-        filepath: Path,
+    filepath: Path,
 ) -> TestResult:
     # we double check size both to be extra-sure and for displaying purpose
     if (size_bytes := os.path.getsize(filepath)) != 124:
@@ -97,7 +97,7 @@ def test_asic_size(
 
 
 def test_bee_size(
-        filepath: Path,
+    filepath: Path,
 ) -> TestResult:
     # we double check size both to be extra-sure and for displaying purpose
     if (size_bytes := os.path.getsize(filepath)) != 64:
@@ -111,8 +111,8 @@ def serialize(tr: TestResult):
 
 
 def validate_configuration(
-        filesdict: Dict[str, Path],
-        model: Literal[*payloads.NAMES],
+    filesdict: Dict[str, Path],
+    model: Literal[*payloads.NAMES],
 ) -> tuple[Dict[str, List[tuple[str, str]]], bool]:
     """
     Validates a configuration and returns test results and a boolean pass.
@@ -139,5 +139,5 @@ def validate_configuration(
             test_bee_size(filesdict["bee"]),
         ],
     }
-    can_proceed = not any([r.status == Status.ERROR for k, v in test_results.items() for r in v ])
+    can_proceed = not any([r.status == Status.ERROR for k, v in test_results.items() for r in v])
     return {k: [*map(serialize, v)] for k, v in test_results.items()}, can_proceed

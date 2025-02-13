@@ -1,13 +1,14 @@
 from typing import Literal
 
-from django import forms
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import EmailValidator
-from django.core.exceptions import ValidationError
-
-from hhelm.settings import EMAIL_CONFIGS_RECIPIENT
-from .models import Configuration
 from hermes import CONFIG_TYPES
+from hhelm.settings import EMAIL_CONFIGS_RECIPIENT
+
+from django import forms
+
+from .models import Configuration
 
 EXPECTED_LEN = {
     "acq": 20,
@@ -21,8 +22,8 @@ ConfigFileType = Literal[*CONFIG_TYPES]
 
 
 def check_length(
-        file: UploadedFile,
-        ftype: ConfigFileType,
+    file: UploadedFile,
+    ftype: ConfigFileType,
 ):
     """
     Checks length of an uploaded file to match the exepcted value for its type.
@@ -56,6 +57,7 @@ class UploadConfiguration(forms.Form):
     """
     A form for uploading configuration files for a specific payload model.
     """
+
     model = forms.ChoiceField(choices=Configuration.MODELS)
     acq = forms.FileField(validators=[lambda f: check_length(f, "acq")])
     acq0 = forms.FileField(validators=[lambda f: check_length(f, "acq0")])
@@ -64,17 +66,15 @@ class UploadConfiguration(forms.Form):
     bee = forms.FileField(validators=[lambda f: check_length(f, "bee")])
 
     def get_model_display(self):
-        return dict(Configuration.MODELS)[self.cleaned_data['model']]
+        return dict(Configuration.MODELS)[self.cleaned_data["model"]]
 
 
 class DeliverConfiguration(forms.Form):
     """
     A form emailing configuration.
     """
-    recipient = forms.CharField(
-        initial=EMAIL_CONFIGS_RECIPIENT,
-        disabled=True
-    )
+
+    recipient = forms.CharField(initial=EMAIL_CONFIGS_RECIPIENT, disabled=True)
     subject = forms.CharField(initial="HERMES configuration files")
     cc = forms.CharField(required=False)
 
