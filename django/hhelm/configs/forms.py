@@ -3,39 +3,29 @@ from typing import Literal
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import EmailValidator
-from hermes import CONFIG_TYPES
+from hermes import CONFIG_TYPES, CONFIG_SIZE
 from hhelm.settings import EMAIL_CONFIGS_RECIPIENT
 
 from django import forms
 
 from .models import Configuration
 
-EXPECTED_LEN = {
-    "acq": 20,
-    "acq0": 20,
-    "asic0": 124,
-    "asic1": 124,
-    "bee": 64,
-}
-
-ConfigFileType = Literal[*CONFIG_TYPES]
-
 
 def check_length(
     file: UploadedFile,
-    ftype: ConfigFileType,
+    ftype: Literal[*CONFIG_TYPES],
 ):
     """
     Checks length of an uploaded file to match the exepcted value for its type.
     """
-    if file.size != EXPECTED_LEN[ftype]:
+    if file.size != CONFIG_SIZE[ftype]:
         raise forms.ValidationError(
-            f"Your {ftype} configuration file ({file.name}) size is {file.size} bytes."
-            f"Files of type {ftype} must have size {EXPECTED_LEN[ftype]} bytes."
+            f"Your {ftype} configuration file size is {file.size} bytes. "
+            f"Files of type {ftype} must have size {CONFIG_SIZE[ftype]} bytes."
         )
 
 
-def validate_cc(value):
+def validate_cc(value: str):
     """
     Validate a list of Cc email addresses. Supports:
      - `prova@dom.com`

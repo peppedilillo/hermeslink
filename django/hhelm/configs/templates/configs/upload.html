@@ -20,7 +20,7 @@
         <div>
             <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
             {{ field }}
-            {{ field.errors }}
+            <div class="field-error">{{ field.errors }}</div>
         </div>
         {% endif %}
     {% endfor %}

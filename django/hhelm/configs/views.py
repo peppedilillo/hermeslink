@@ -44,6 +44,7 @@ def upload(request: HttpRequest) -> HttpResponse:
             request.session["config_files"] = files
             request.session["config_model"] = form.get_model_display()
             return redirect("configs:test")
+        return render(request, "configs/upload.html", {'form': form})
 
     form = forms.UploadConfiguration()
     return render(request, "configs/upload.html", {"form": form})
@@ -61,7 +62,7 @@ def test(request: HttpRequest) -> HttpResponse:
         or "config_files" not in request.session
         or "config_model" not in request.session
     ):
-        return redirect("configs:new")
+        return redirect("configs:upload")
 
     files = {k: Path(v) for k, v in request.session["config_files"].items()}
 
@@ -110,20 +111,26 @@ def deliver(request: HttpRequest) -> HttpResponse:
             email.attach_file(file_path)
         email.send()
 
-    def record_configuration():
+    def create_configuration():
         """Record delivered configuration to db."""
         model_key = {v: k for k, v in dict(models.Configuration.MODELS).items()}[request.session["config_model"]]
         config_entry = models.Configuration(
             author=request.user,
-            delivered=True,
+            delivered=False,
+            deliver_time=None,
             uploaded=False,
-            upload_time=timezone.now(),
+            upload_time=None,
             model=model_key,
         )
-        for field in ["acq", "acq0", "asic0", "asic1", "bee"]:
+        for field in CONFIG_TYPES:
             file_path = Path(request.session["config_files"][field])
             with open(file_path, "rb") as f:
                 setattr(config_entry, field, f.read())
+        return config_entry
+
+    def commit_configuration(config_entry: models.Configuration):
+        config_entry.delivered = True
+        config_entry.deliver_time = timezone.now()
         config_entry.save()
 
     def cleanup():
@@ -151,8 +158,10 @@ def deliver(request: HttpRequest) -> HttpResponse:
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    record_configuration()
+                    config = create_configuration()
                     send_email()
+                    commit_configuration(config)
+
             except SMTPException as e:
                 print(f"Email delivery failed: {str(e)}")
                 return render(request, "configs/deliver_error.html", {"error": "Failed to send email"})

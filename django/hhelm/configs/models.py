@@ -5,7 +5,6 @@ from hhelm.settings import AUTH_USER_MODEL
 CustomUser = AUTH_USER_MODEL
 
 
-# Create your models here.
 class Configuration(models.Model):
     """
     Core configuration model. Stores configurations as binary blobs, as well as
@@ -26,8 +25,9 @@ class Configuration(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(to=CustomUser, related_name="configurations", on_delete=models.PROTECT)
     delivered = models.BooleanField(default=False)
+    deliver_time = models.DateTimeField(null=True, blank=True)
     uploaded = models.BooleanField(default=False)
-    upload_time = models.DateTimeField(null=True, default=None)
+    upload_time = models.DateTimeField(null=True, blank=True)
     model = models.CharField(max_length=1, choices=MODELS)
     acq = models.BinaryField(max_length=20, validators=[MinLengthValidator(20)])
     acq0 = models.BinaryField(max_length=20, validators=[MinLengthValidator(20)])

@@ -3,6 +3,16 @@ from pathlib import Path
 from typing import Dict
 
 
+CONFIG_TYPES = ("acq", "acq0", "asic0", "asic1", "bee",)
+CONFIG_SIZE = {
+    "acq": 20,
+    "acq0": 20,
+    "asic0": 124,
+    "asic1": 124,
+    "bee": 64,
+}
+
+
 def filepath_to_bitdict_asic(filepath: Path) -> Dict[str, str]:
     """
     Takes an asic configuration file and transforms it into a dictionary of strings.
