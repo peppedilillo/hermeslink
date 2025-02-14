@@ -9,8 +9,8 @@ ENV PYTHONUNBUFFERED 1
 
 # install dependencies
 RUN pip install --upgrade pip
-COPY requirements.txt .
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
+COPY requirements.prod.txt .
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.prod.txt
 
 ## FINAL IMAGE
 FROM python:3.11-bookworm
@@ -41,7 +41,7 @@ WORKDIR $APP_HOME
 # and install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends netcat-openbsd
 COPY --from=builder /usr/src/app/wheels /wheels
-COPY --from=builder /usr/src/app/requirements.txt .
+COPY --from=builder /usr/src/app/requirements.prod.txt .
 RUN pip install --upgrade pip
 RUN pip install --no-cache /wheels/*
 

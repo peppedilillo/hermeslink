@@ -24,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = bool(int(os.environ.get("DEBUG", default=0)))
+DEBUG = bool(int(os.environ.get("DEBUG", default="0")))
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", default="").split(" ")
 
@@ -44,6 +44,19 @@ INSTALLED_APPS = [
     "configs",
 ]
 
+
+if DEBUG:
+    INSTALLED_APPS += [
+        "debug_toolbar",
+    ]
+
+    DEBUG_TOOLBAR_CONFIG = {
+        "IS_RUNNING_TESTS": False,
+        # p. we are not installing the debug toolbar in production in first place
+        #    so it's not a problem to just have it on all the time.
+        "SHOW_TOOLBAR_CALLBACK": lambda _: True,
+    }
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -53,6 +66,12 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+
+if DEBUG:
+    MIDDLEWARE += [
+        "debug_toolbar.middleware.DebugToolbarMiddleware",
+    ]
 
 ROOT_URLCONF = "hhelm.urls"
 
@@ -144,7 +163,12 @@ LOGIN_REDIRECT_URL = "/"
 # p. default configs email recipient
 EMAIL_CONFIGS_RECIPIENT = "giuseppe.dilillo@inaf.it"
 
-if not DEBUG:
+# p. email settings
+if False:
+    EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
+    # p. the `EMAIL_DIR` environment variable should be set by docker file
+    EMAIL_FILE_PATH = Path(os.environ.get("EMAIL_DIR"))
+else:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
     EMAIL_HOST = os.environ.get("EMAIL_HOST")
     EMAIL_PORT = os.environ.get("EMAIL_PORT")
@@ -152,12 +176,7 @@ if not DEBUG:
     EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
     EMAIL_USE_TLS = bool(int(os.environ.get("EMAIL_USE_TLS", default=1)))
     EMAIL_USE_SSL = bool(int(os.environ.get("EMAIL_USE_SSL", default=0)))
-else:
-    EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
-    # p. the `EMAIL_DIR` environment variable should be set by docker file
-    EMAIL_FILE_PATH = Path(os.environ.get("EMAIL_DIR"))
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
