@@ -36,19 +36,29 @@ VIEWS TESTS:
   - Wrong ASIC0/ASIC1 configurations
 * Test file content preservation throughout the process
 * Test session cleanup after delivery
+
+EMAIL DELIVERY TESTS:
+* Test successful email delivery with correct attachments
+* Test email content verification
+* Test CC field handling
+* Test failure handling and rollback
 """
 
 import shutil
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
+from smtplib import SMTPException
 
-from django.test import TestCase, Client
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.db.models import ProtectedError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core import mail
+from django.test import TestCase, Client, override_settings
 from django.urls import reverse
+from django.conf import settings
 
 from hhelm.settings import BASE_DIR
 from .models import Configuration
@@ -69,7 +79,7 @@ class ConfigurationModelTest(TestCase):
         cls.valid_len_acq_data = 20  # 20 bytes
         cls.valid_len_asic_data = 124  # 124 bytes
         cls.valid_len_bee_data = 64  # 64 bytes
-        cls.valid_models = ["1", "2", "3", "4", "5", "6"]
+        cls.valid_models = ["H1", "H2", "H3", "H4", "H5", "H6"]
 
         cls.valid_length_data = {
             "acq" : b'x' * cls.valid_len_acq_data,
@@ -203,7 +213,7 @@ class ConfigurationFormTest(TestCase):
 
     def test_upload_form_valid_data(self):
         """Test that form accepts valid data"""
-        form_data = {'model': '1'}
+        form_data = {'model': 'H1'}
         form = UploadConfiguration(data=form_data, files=self.valid_files)
         self.assertTrue(form.is_valid())
 
@@ -231,7 +241,7 @@ class ConfigurationFormTest(TestCase):
 
     def test_upload_form_model_validation(self):
         """Test model choice validation"""
-        form_data = {'model': '7'}  # Invalid model
+        form_data = {'model': 'H7'}  # Invalid model
         form = UploadConfiguration(data=form_data, files=self.valid_files)
         self.assertFalse(form.is_valid())
         self.assertIn('model', form.errors)
@@ -494,13 +504,9 @@ class ConfigurationViewTest(TestCase):
     def login_and_upload_fileset(self, model: str, files: dict):
         """Helper method to perform a valid file upload"""
         self.login()
-        form_data = {
-            "model": model,
-        }
         response = self.client.post(
             reverse('configs:upload'),
-            model=model,
-            data={**form_data, **files},
+            data={"model": model, **files},
             follow=True
         )
         return response
@@ -528,11 +534,10 @@ class ConfigurationViewTest(TestCase):
 
     def test_upload_view_post_success(self):
         """Test successful file upload"""
-        response = self.login_and_upload_fileset('6', self.files_fm6)
+        response = self.login_and_upload_fileset('H6', self.files_fm6)
         self.assertRedirects(response, reverse('configs:test'))
 
         self.assertIn('config_id', self.client.session)
-        self.assertIn('config_files', self.client.session)
         self.assertIn('config_model', self.client.session)
 
     def test_upload_view_post_error(self):
@@ -550,7 +555,7 @@ class ConfigurationViewTest(TestCase):
 
     def test_test_view_with_valid_session(self):
         """Test test view with valid context data"""
-        self.login_and_upload_fileset('2', self.files_fm2)
+        self.login_and_upload_fileset('H2', self.files_fm2)
 
         response = self.client.get(reverse('configs:test'))
         self.assertEqual(response.status_code, 200)
@@ -562,10 +567,9 @@ class ConfigurationViewTest(TestCase):
 
     def test_test_session_data_persistence(self):
         """Test that session data persists correctly through the workflow"""
-        _ = self.login_and_upload_fileset('6', self.files_fm6)
+        _ = self.login_and_upload_fileset('H6', self.files_fm6)
         session_data = {
             'config_id': self.client.session['config_id'],
-            'config_files': self.client.session['config_files'],
             'config_model': self.client.session['config_model']
         }
 
@@ -581,7 +585,7 @@ class ConfigurationViewTest(TestCase):
         client1.login(username='testuser', password='testpass123')
         client2.login(username='testuser', password='testpass123')
 
-        form_data = {'model': '6'}
+        form_data = {'model': 'H6'}
         _ = client1.post(
             reverse('configs:upload'),
             data={**form_data, **self.files_fm6},
@@ -600,7 +604,7 @@ class ConfigurationViewTest(TestCase):
 
     def test_test_view_pass_matching_data_fm6(self):
         """Test test view does not report warning and error for a well-formed configuration"""
-        self.login_and_upload_fileset('6', self.files_fm6)
+        self.login_and_upload_fileset('H6', self.files_fm6)
 
         response = self.client.get(reverse('configs:test'))
         results = response.context['results']
@@ -617,7 +621,7 @@ class ConfigurationViewTest(TestCase):
 
     def test_test_view_pass_matching_data_fm2(self):
         """Test test view does not report warning and error for a well-formed configuration"""
-        self.login_and_upload_fileset('2', self.files_fm2)
+        self.login_and_upload_fileset('H2', self.files_fm2)
 
         response = self.client.get(reverse('configs:test'))
         results = response.context['results']
@@ -637,7 +641,7 @@ class ConfigurationViewTest(TestCase):
         files_mixed_up = self.files_fm6.copy()
         files_mixed_up["asic1"] = self.files_fm2["asic1"]
 
-        self.login_and_upload_fileset('6', files_mixed_up)
+        self.login_and_upload_fileset('H6', files_mixed_up)
         response = self.client.get(reverse('configs:test'))
         results = response.context['results']
 
@@ -651,7 +655,7 @@ class ConfigurationViewTest(TestCase):
         """Test test view reports on asic0 given in place of asic1"""
         # i'm creating a new dataset for this because reading through a
         # file will consume it and i want to read the same file twice.
-        self.login_and_upload_fileset('6', self.files_wrong_asic1)
+        self.login_and_upload_fileset('H6', self.files_wrong_asic1)
         response = self.client.get(reverse('configs:test'))
         results = response.context['results']
 
@@ -665,7 +669,7 @@ class ConfigurationViewTest(TestCase):
         """Test test view reports on asic1 given in place of asic0"""
         # i'm creating a new dataset for this because reading through a
         # file will consume it and i want to read the same file twice.
-        self.login_and_upload_fileset('2', self.files_wrong_asic0)
+        self.login_and_upload_fileset('H2', self.files_wrong_asic0)
         response = self.client.get(reverse('configs:test'))
         results = response.context['results']
 
@@ -682,7 +686,7 @@ class ConfigurationViewTest(TestCase):
         self.assertRedirects(response, reverse('configs:upload'))
 
     def test_deliver_view_with_valid_session(self):
-        _ = self.login_and_upload_fileset('6', self.files_fm6)
+        _ = self.login_and_upload_fileset('H6', self.files_fm6)
         self.client.get(reverse('configs:test'))
         response = self.client.get(reverse('configs:deliver'))
         self.assertEqual(response.status_code, 200)
@@ -705,7 +709,7 @@ class ConfigurationViewTest(TestCase):
 
     def test_file_content_preservation(self):
         """Test that file content is preserved throughout the process"""
-        _ = self.login_and_upload_fileset('6', self.files_fm6)
+        _ = self.login_and_upload_fileset('H6', self.files_fm6)
 
         response = self.client.get(reverse('configs:test'))
         contents = response.context['contents']
@@ -759,7 +763,7 @@ class ConfigurationViewTest(TestCase):
         response = self.client.get(reverse('configs:deliver'))
         self.assertRedirects(response, reverse('configs:upload'))
 
-        _ = self.login_and_upload_fileset('6', self.files_fm6)
+        _ = self.login_and_upload_fileset('H6', self.files_fm6)
         response = self.client.get(reverse('configs:test'))
         self.assertEqual(response.status_code, 200)
 
@@ -770,3 +774,272 @@ class ConfigurationViewTest(TestCase):
         # Can access deliver
         response = self.client.get(reverse('configs:deliver'))
         self.assertEqual(response.status_code, 200)
+
+
+class ConfigurationEmailTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # Create test user
+        cls.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+
+        # Setup test files - using real configuration files for proper validation
+        cls.files_fm6 = {
+            'acq': SimpleUploadedFile(
+                name="acq.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/acq_FM6.cfg"),
+            ),
+            'acq0': SimpleUploadedFile(
+                name="acq0.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/acq0_FM6.cfg"),
+            ),
+            'asic0': SimpleUploadedFile(
+                name="asic0.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/asic0_FM6.cfg"),
+            ),
+            'asic1': SimpleUploadedFile(
+                name="asic1.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/asic1_FM6_thr105.cfg"),
+            ),
+            'bee': SimpleUploadedFile(
+                name="bee.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/BEE_FM6.cfg"),
+            ),
+        }
+
+    def setUp(self):
+        self.client = Client()
+        self.client.login(username='testuser', password='testpass123')
+        # Clear the test outbox
+        mail.outbox = []
+
+    def prepare_delivery_session(self):
+        """Helper to setup a valid delivery session"""
+        response = self.client.post(
+            reverse('configs:upload'),
+            data={'model': 'H6', **self.files_fm6},
+            follow=True
+        )
+        self.client.get(reverse('configs:test'))
+        return response
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_successful_email_delivery(self):
+        """Test that email is sent successfully with correct content"""
+        self.prepare_delivery_session()
+
+        form_data = {
+            'recipient': settings.EMAIL_CONFIGS_RECIPIENT,
+            'subject': 'Test Configuration Delivery',
+            'cc': 'cc@example.com'
+        }
+
+        response = self.client.post(reverse('configs:deliver'), data=form_data)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'configs/deliver_success.html')
+
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+
+        # Verify email content
+        self.assertEqual(email.subject, 'Test Configuration Delivery')
+        self.assertEqual(email.to, [settings.EMAIL_CONFIGS_RECIPIENT])
+        self.assertEqual(email.cc, ['cc@example.com'])
+
+        # Verify attachments
+        self.assertEqual(len(email.attachments), 5)  # Should have all config files
+        attachment_names = [att[0] for att in email.attachments]
+        self.assertTrue(all(f"{type}.cfg" in attachment_names
+                            for type in ['acq', 'acq0', 'asic0', 'asic1', 'bee']))
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_delivery_with_multiple_cc(self):
+        """Test email delivery with multiple CC recipients"""
+        self.prepare_delivery_session()
+
+        form_data = {
+            'recipient': settings.EMAIL_CONFIGS_RECIPIENT,
+            'subject': 'Test Configuration Delivery',
+            'cc': 'cc1@example.com; cc2@example.com'
+        }
+
+        response = self.client.post(reverse('configs:deliver'), data=form_data)
+        self.assertEqual(response.status_code, 200)
+
+        email = mail.outbox[0]
+        self.assertEqual(email.cc, ['cc1@example.com', 'cc2@example.com'])
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_email_failure_rollback(self):
+        """Test that database changes are rolled back if email fails"""
+        self.prepare_delivery_session()
+
+        form_data = {
+            'recipient': settings.EMAIL_CONFIGS_RECIPIENT,
+            'subject': 'Test Configuration Delivery',
+        }
+
+        with patch('django.core.mail.EmailMessage.send', side_effect=SMTPException('SMTP Error')):
+            response = self.client.post(reverse('configs:deliver'), data=form_data)
+
+            self.assertTemplateUsed(response, 'configs/deliver_error.html')
+
+            self.assertEqual(Configuration.objects.count(), 0)
+
+            # Session should still be valid
+            self.assertIn('config_id', self.client.session)
+            self.assertIn('config_model', self.client.session)
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_attachment_content_verification(self):
+        """Test that email attachments contain correct file content"""
+        self.prepare_delivery_session()
+
+        form_data = {
+            'recipient': settings.EMAIL_CONFIGS_RECIPIENT,
+            'subject': 'Test Configuration Delivery',
+        }
+
+        response = self.client.post(reverse('configs:deliver'), data=form_data)
+        email = mail.outbox[0]
+
+        # Verify each attachment's content
+        for attachment in email.attachments:
+            name, content, mime = attachment
+            file_type = name.split('.')[0]
+
+            # Compare with original content
+            original_file = self.files_fm6[file_type]
+            original_file.seek(0)
+            self.assertEqual(content, original_file.read())
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_delivery_database_record(self):
+        """Test that successful delivery creates correct database record"""
+        self.prepare_delivery_session()
+
+        form_data = {
+            'recipient': settings.EMAIL_CONFIGS_RECIPIENT,
+            'subject': 'Test Configuration Delivery',
+        }
+
+        self.client.post(reverse('configs:deliver'), data=form_data)
+
+        # Verify configuration record
+        config = Configuration.objects.last()
+        self.assertIsNotNone(config)
+        self.assertTrue(config.delivered)
+        self.assertIsNotNone(config.deliver_time)
+        self.assertEqual(config.model, 'H6')
+        self.assertEqual(config.author, self.user)
+
+        # Verify file contents
+        for file_type in ["acq", "acq0", "asic0", "asic1", "bee"]:
+            original_file = self.files_fm6[file_type]
+            original_file.seek(0)
+            self.assertEqual(getattr(config, file_type), original_file.read())
+
+
+class ConfigurationFileSystemTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # Create test user
+        cls.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+
+
+        # Setup test files
+        cls.files_fm6 = {
+            'acq': SimpleUploadedFile(
+                name="acq.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/acq_FM6.cfg"),
+            ),
+            'acq0': SimpleUploadedFile(
+                name="acq0.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/acq0_FM6.cfg"),
+            ),
+            'asic0': SimpleUploadedFile(
+                name="asic0.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/asic0_FM6.cfg"),
+            ),
+            'asic1': SimpleUploadedFile(
+                name="asic1.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/asic1_FM6_thr105.cfg"),
+            ),
+            'bee': SimpleUploadedFile(
+                name="bee.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/BEE_FM6.cfg"),
+            ),
+        }
+
+    def setUp(self):
+        self.client = Client()
+        self.client.login(username='testuser', password='testpass123')
+        self.media_root = settings.MEDIA_ROOT
+        if Path(self.media_root / "configs").exists():
+            shutil.rmtree(Path(self.media_root / "configs"))
+
+    def tearDown(self):
+        if Path(self.media_root / "configs").exists():
+            shutil.rmtree(Path(self.media_root / "configs"))
+
+    def test_successful_file_cleanup(self):
+        """Test that files are cleaned up after successful delivery"""
+        _ = self.client.post(
+            reverse('configs:upload'),
+            data={'model': 'H6', **self.files_fm6},
+            follow=True
+        )
+
+        config_id = self.client.session['config_id']
+        config_dir = Path(self.media_root) / f"configs/{config_id}"
+
+        # Verify files were created
+        self.assertTrue(config_dir.exists())
+        for file_type in ["acq", "acq0", "asic0", "asic1", "bee"]:
+            self.assertTrue((config_dir / f"{file_type}.cfg").exists())
+
+        # Complete the delivery process
+        self.client.get(reverse('configs:test'))
+        response = self.client.post(
+            reverse('configs:deliver'),
+            data={
+                'recipient': settings.EMAIL_CONFIGS_RECIPIENT,
+                'subject': 'Test Configuration Delivery',
+            }
+        )
+
+        # Verify files were cleaned up
+        self.assertFalse(config_dir.exists())
+
+    def test_files_preserved_on_delivery_failure(self):
+        """Test that files are preserved when delivery fails"""
+        response = self.client.post(
+            reverse('configs:upload'),
+            data={'model': 'H6', **self.files_fm6},
+            follow=True
+        )
+
+        config_id = self.client.session['config_id']
+        config_dir = Path(self.media_root) / f"configs/{config_id}"
+
+        self.client.get(reverse('configs:test'))
+
+        # Simulate delivery failure
+        with patch('django.core.mail.EmailMessage.send', side_effect=SMTPException('SMTP Error')):
+            response = self.client.post(
+                reverse('configs:deliver'),
+                data={
+                    'recipient': settings.EMAIL_CONFIGS_RECIPIENT,
+                    'subject': 'Test Configuration Delivery',
+                }
+            )
+
+        # Verify files still exist
+        self.assertTrue(config_dir.exists())
+        for file_type in ['acq', 'acq0', 'asic0', 'asic1', 'bee']:
+            self.assertTrue((config_dir / f"{file_type}.cfg").exists())
