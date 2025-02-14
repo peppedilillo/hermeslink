@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,6 +26,8 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(int(os.environ.get("DEBUG", default="0")))
+# p. catches test environments preventing the debug toolbar to mess with it
+TESTING = "test" in sys.argv
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", default="").split(" ")
 
@@ -44,16 +47,15 @@ INSTALLED_APPS = [
     "configs",
 ]
 
-
-if DEBUG:
+# p. we do not install the debug toolbar when testing or running in production
+if DEBUG and not TESTING:
     INSTALLED_APPS += [
         "debug_toolbar",
     ]
 
     DEBUG_TOOLBAR_CONFIG = {
-        "IS_RUNNING_TESTS": False,
-        # p. we are not installing the debug toolbar in production in first place
-        #    so it's not a problem to just have it on all the time.
+        # p. since we are not installing the toobard in prod or debug it's no
+        #    problem to have it up all the time.
         "SHOW_TOOLBAR_CALLBACK": lambda _: True,
     }
 
@@ -68,7 +70,8 @@ MIDDLEWARE = [
 ]
 
 
-if DEBUG:
+# p. we do not install the debug toolbar when testing or running in production
+if DEBUG and not TESTING:
     MIDDLEWARE += [
         "debug_toolbar.middleware.DebugToolbarMiddleware",
     ]
@@ -164,7 +167,7 @@ LOGIN_REDIRECT_URL = "/"
 EMAIL_CONFIGS_RECIPIENT = "giuseppe.dilillo@inaf.it"
 
 # p. email settings
-if False:
+if DEBUG:
     EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
     # p. the `EMAIL_DIR` environment variable should be set by docker file
     EMAIL_FILE_PATH = Path(os.environ.get("EMAIL_DIR"))

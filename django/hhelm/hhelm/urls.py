@@ -29,7 +29,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
 ]
 
-if settings.DEBUG:
+# p. we do not install the debug toolbar when testing or running in production
+if settings.DEBUG and not settings.TESTING:
     import debug_toolbar
 
     urlpatterns = (
