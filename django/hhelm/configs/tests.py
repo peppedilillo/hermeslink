@@ -1,6 +1,5 @@
 """
-A suite of test for the `configs` application.
-
+Tests for `configs` application.
 
 MODEL TESTS:
 * Test that a configuration can be created with valid data
@@ -42,6 +41,10 @@ EMAIL DELIVERY TESTS:
 * Test email content verification
 * Test CC field handling
 * Test failure handling and rollback
+
+FILE SYSTEM TESTS:
+* Test that files are cleaned up after delivery
+* Test that files are preserved on delivery failure
 """
 
 import shutil
@@ -79,7 +82,7 @@ class ConfigurationModelTest(TestCase):
         cls.valid_len_acq_data = 20  # 20 bytes
         cls.valid_len_asic_data = 124  # 124 bytes
         cls.valid_len_bee_data = 64  # 64 bytes
-        cls.valid_models = ["H1", "H2", "H3", "H4", "H5", "H6"]
+        cls.valid_models = ("H1", "H2", "H3", "H4", "H5", "H6")
 
         cls.valid_length_data = {
             "acq" : b'x' * cls.valid_len_acq_data,
