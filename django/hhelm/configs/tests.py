@@ -366,115 +366,115 @@ class ConfigurationViewTest(TestCase):
         cls.files_fm6 = {
             'acq': SimpleUploadedFile(
                 name="acq.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm6/acq_FM6.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/acq_FM6.cfg"),
             ),
             'acq0': SimpleUploadedFile(
                 name="acq0.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm6/acq0_FM6.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/acq0_FM6.cfg"),
             ),
             'asic0': SimpleUploadedFile(
                 name="asic0.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm6/asic0_FM6.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/asic0_FM6.cfg"),
             ),
             'asic1': SimpleUploadedFile(
                 name="asic1.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm6/asic1_FM6_thr105.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/asic1_FM6_thr105.cfg"),
             ),
             'bee': SimpleUploadedFile(
                 name="bee.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm6/BEE_FM6.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/BEE_FM6.cfg"),
             ),
         }
 
         cls.files_fm2 = {
             'acq': SimpleUploadedFile(
                 name="acq.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm2/acq_FM2.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm2/acq_FM2.cfg"),
             ),
             'acq0': SimpleUploadedFile(
                 name="acq0.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm2/acq0_FM2.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm2/acq0_FM2.cfg"),
             ),
             'asic0': SimpleUploadedFile(
                 name="asic0.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm2/asic0_FM2.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm2/asic0_FM2.cfg"),
             ),
             'asic1': SimpleUploadedFile(
                 name="asic1.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm2/asic1_FM2_thr105.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm2/asic1_FM2_thr105.cfg"),
             ),
             'bee': SimpleUploadedFile(
                 name="bee.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm2/BEE_FM2.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm2/BEE_FM2.cfg"),
             ),
         }
 
         cls.files_fm1 = {
             'acq': SimpleUploadedFile(
                 name="acq.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_wrong_fm1/acq_FM1.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm1/acq_FM1.cfg"),
             ),
             'acq0': SimpleUploadedFile(
                 name="acq0.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_wrong_fm1/acq0_FM1.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm1/acq0_FM1.cfg"),
             ),
             'asic0': SimpleUploadedFile(
                 name="asic0.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_wrong_fm1/asic0_FM1.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm1/asic0_FM1.cfg"),
             ),
             'asic1': SimpleUploadedFile(
                 name="asic1.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_wrong_fm1/asic1_FM1_thr105.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm1/asic1_FM1_thr105.cfg"),
             ),
             'bee': SimpleUploadedFile(
                 name="bee.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_wrong_fm1/BEE_FM1.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm1/BEE_FM1.cfg"),
             ),
         }
 
         cls.files_wrong_asic1 = {
             'acq': SimpleUploadedFile(
                 name="acq.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm6/acq_FM6.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/acq_FM6.cfg"),
             ),
             'acq0': SimpleUploadedFile(
                 name="acq0.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm6/acq0_FM6.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/acq0_FM6.cfg"),
             ),
             'asic0': SimpleUploadedFile(
                 name="asic0.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm6/asic0_FM6.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/asic0_FM6.cfg"),
             ),
             'asic1': SimpleUploadedFile(  # Using asic0 content for asic1
                 name="asic1.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm6/asic0_FM6.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/asic0_FM6.cfg"),
             ),
             'bee': SimpleUploadedFile(
                 name="bee.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm6/BEE_FM6.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/BEE_FM6.cfg"),
             ),
         }
 
         cls.files_wrong_asic0 = {
             'acq': SimpleUploadedFile(
                 name="acq.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm2/acq_FM2.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm2/acq_FM2.cfg"),
             ),
             'acq0': SimpleUploadedFile(
                 name="acq0.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm2/acq0_FM2.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm2/acq0_FM2.cfg"),
             ),
             'asic0': SimpleUploadedFile(
                 name="asic0.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm2/asic1_FM2_thr105.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm2/asic1_FM2_thr105.cfg"),
             ),
             'asic1': SimpleUploadedFile(  # Using asic1 content for asic0
                 name="asic1.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm2/asic1_FM2_thr105.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm2/asic1_FM2_thr105.cfg"),
             ),
             'bee': SimpleUploadedFile(
                 name="bee.cfg",
-                content=f2c(BASE_DIR / "configs/tests/configs_valid_fm2/BEE_FM2.cfg"),
+                content=f2c(BASE_DIR / "configs/tests/configs_fm2/BEE_FM2.cfg"),
             ),
         }
 
