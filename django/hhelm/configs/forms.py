@@ -49,14 +49,11 @@ class UploadConfiguration(forms.Form):
     """
 
     model = forms.ChoiceField(choices=Configuration.MODELS)
-    acq = forms.FileField(validators=[lambda f: check_length(f, "acq")])
     acq0 = forms.FileField(validators=[lambda f: check_length(f, "acq0")])
+    acq = forms.FileField(validators=[lambda f: check_length(f, "acq")])
     asic0 = forms.FileField(validators=[lambda f: check_length(f, "asic0")])
     asic1 = forms.FileField(validators=[lambda f: check_length(f, "asic1")])
     bee = forms.FileField(validators=[lambda f: check_length(f, "bee")])
-
-    def get_model_display(self):
-        return dict(Configuration.MODELS)[self.cleaned_data["model"]]
 
 
 class DeliverConfiguration(forms.Form):
