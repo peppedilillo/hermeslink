@@ -1,6 +1,5 @@
 from functools import reduce
 
-
 CONFIG_TYPES = tuple(sorted(("acq", "acq0", "asic0", "asic1", "bee")))
 CONFIG_SIZE = {
     "acq": 20,
@@ -17,7 +16,7 @@ def bytest_to_bitdict_asic(bstr: bytes) -> dict[str, str]:
     dictionary of strings. The dictionary has key for different quadrants, and binary
     (01 format) strings for values.
     """
-    return {quad: "".join([format(b, "08b") for b in bstr[i*31: (i+1)*31]]) for i, quad in enumerate("ABCD")}
+    return {quad: "".join([format(b, "08b") for b in bstr[i * 31 : (i + 1) * 31]]) for i, quad in enumerate("ABCD")}
 
 
 _SLICES_ASIC = {

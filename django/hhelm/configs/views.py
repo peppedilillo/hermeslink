@@ -1,7 +1,7 @@
 from collections import OrderedDict
+from hashlib import sha256
 from smtplib import SMTPException
 from typing import Literal
-from hashlib import sha256
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -13,27 +13,26 @@ from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.utils import timezone
+from hermes import CONFIG_TYPES
+from hermes import SPACECRAFTS_NAMES
 
-from hermes import SPACECRAFTS_NAMES, CONFIG_TYPES
 from . import forms
 from . import models
 from . import validators
-from .models import Configuration, config_to_sha256, config_to_archive
+from .models import config_to_archive
+from .models import config_to_sha256
+from .models import Configuration
 
 
 def encode_config_data(config_data: OrderedDict[str, bytes]) -> dict[str, str]:
     """Encodes binary configuration data for session storage using hex"""
-    return OrderedDict(
-        (ftype, content.hex())
-        for ftype, content in config_data.items()
-    )
+    return OrderedDict((ftype, content.hex()) for ftype, content in config_data.items())
+
 
 def decode_config_data(encoded_data: OrderedDict[str, str]) -> dict[str, bytes]:
     """Decodes hex-encoded configuration data from session storage"""
-    return OrderedDict(
-        (ftype, bytes.fromhex(content))
-        for ftype, content in encoded_data.items()
-    )
+    return OrderedDict((ftype, bytes.fromhex(content)) for ftype, content in encoded_data.items())
+
 
 @login_required
 def upload(request: HttpRequest) -> HttpResponse:
@@ -58,15 +57,17 @@ def upload(request: HttpRequest) -> HttpResponse:
             request.session["config_hash"] = hasher.hexdigest()
             request.session["config_model"] = form.cleaned_data["model"]
             return redirect("configs:test")
-        return render(request, "configs/upload.html", {'form': form})
+        return render(request, "configs/upload.html", {"form": form})
 
     form = forms.UploadConfiguration()
     return render(request, "configs/upload.html", {"form": form})
 
+
 def validate_config_model(model: Literal[*SPACECRAFTS_NAMES]) -> bool:
     """Checks config model to be allowed"""
-    model_keys, _  = zip(*models.Configuration.MODELS)
+    model_keys, _ = zip(*models.Configuration.MODELS)
     return model in model_keys
+
 
 def validate_config_data(config_data: dict[str, str]):
     """Checks config data to contain the right keys."""
@@ -78,9 +79,9 @@ def session_is_valid(request: HttpRequest) -> bool:
     Checks hash to be present, model to be well set and all files to be online.
     """
     if (
-            ("config_model" in request.session and validate_config_model(request.session["config_model"])) and
-            ("config_data" in request.session and validate_config_data(request.session["config_data"])) and
-            ("config_hash" in request.session)
+        ("config_model" in request.session and validate_config_model(request.session["config_model"]))
+        and ("config_data" in request.session and validate_config_data(request.session["config_data"]))
+        and ("config_hash" in request.session)
     ):
         return True
     return False
@@ -114,8 +115,10 @@ def test(request: HttpRequest) -> HttpResponse:
         },
     )
 
+
 class HashError(Exception):
     """Inconsitent configuration hashes"""
+
 
 @login_required
 def deliver(request: HttpRequest) -> HttpResponse:
@@ -136,7 +139,7 @@ def deliver(request: HttpRequest) -> HttpResponse:
             to=(form.cleaned_data["recipient"],),
         )
         archive_content = config_to_archive(config_entry, "zip")
-        email.attach('hermes_cfg.zip', archive_content, 'application/zip')
+        email.attach("hermes_cfg.zip", archive_content, "application/zip")
         email.send()
 
     def create_and_check_configuration():
@@ -173,13 +176,11 @@ def deliver(request: HttpRequest) -> HttpResponse:
         for key in ["config_model", "config_data", "config_hash", "can_proceed"]:
             request.session.pop(key, None)  # Safely remove keys
 
-
     if not session_is_valid(request) or "can_proceed" not in request.session:
         return redirect("configs:upload")
 
     if not request.session["can_proceed"]:
         return redirect("configs:test")
-
 
     if request.method == "POST":
         form = forms.DeliverConfiguration(request.POST)
@@ -208,7 +209,9 @@ def deliver(request: HttpRequest) -> HttpResponse:
         {"form": form},
     )
 
+
 EMPTY_HISTORY_MESSAGE = "No configuration has been uploaded yet."
+
 
 @login_required
 def history(request: HttpRequest) -> HttpResponse:
@@ -243,7 +246,7 @@ def download_config(request, config_id: int, format: Literal["zip", "tar"] = "zi
     filename = f"hermes_cfg_{config_id}.{'tar.gz' if format == 'tar' else 'zip'}"
 
     response = HttpResponse(archive_content)
-    response['Content-Type'] = 'application/zip' if format == "zip" else 'application/x-tar'
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response["Content-Type"] = "application/zip" if format == "zip" else "application/x-tar"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
     return response

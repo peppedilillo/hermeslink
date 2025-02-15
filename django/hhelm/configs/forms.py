@@ -3,7 +3,8 @@ from typing import Literal
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import EmailValidator
-from hermes import CONFIG_TYPES, CONFIG_SIZE
+from hermes import CONFIG_SIZE
+from hermes import CONFIG_TYPES
 from hhelm.settings import EMAIL_CONFIGS_RECIPIENT
 
 from django import forms

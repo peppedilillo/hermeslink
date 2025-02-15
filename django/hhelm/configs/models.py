@@ -1,13 +1,14 @@
-from typing import Literal, Iterable
+from hashlib import sha256
+import io
+import tarfile
+from typing import Iterable, Literal
+import zipfile
 
 from django.core.validators import MinLengthValidator
 from django.db import models
-from hashlib import sha256
-
-from hermes import CONFIG_TYPES, SPACECRAFTS_NAMES
+from hermes import CONFIG_TYPES
+from hermes import SPACECRAFTS_NAMES
 from hhelm.settings import AUTH_USER_MODEL
-import zipfile, tarfile, io
-
 
 CustomUser = AUTH_USER_MODEL
 
@@ -37,8 +38,7 @@ class Configuration(models.Model):
 
 
 def config_to_sha256(
-        config: Configuration,
-        ordered_keys: Iterable[Literal[*CONFIG_TYPES]] = CONFIG_TYPES
+    config: Configuration, ordered_keys: Iterable[Literal[*CONFIG_TYPES]] = CONFIG_TYPES
 ) -> tuple[str, Iterable]:
     """
     Sequentially encodes a configuration, returns the config 256 hash and the
@@ -61,7 +61,7 @@ def config_to_readme(config: Configuration) -> str:
         f"Payload model: {config.model}",
         f"Created on: {config.date}",
         f"Author: {config.author}",
-        f"Delivered status: {config.delivered}"
+        f"Delivered status: {config.delivered}",
     ]
 
     if config.delivered:
@@ -71,32 +71,32 @@ def config_to_readme(config: Configuration) -> str:
     if config.uploaded:
         sections.append(f"Upload time: {config.upload_time}")
 
-    sections.extend([
-        f"SHA256 hash: {sha256sum}",
-        "",
-        "Comments:",
-        f"* Hash check with `cat {' '.join(map(lambda s: s + '.cfg', order))} | sha256sum`"
-    ])
+    sections.extend(
+        [
+            f"SHA256 hash: {sha256sum}",
+            "",
+            "Comments:",
+            f"* Hash check with `cat {' '.join(map(lambda s: s + '.cfg', order))} | sha256sum`",
+        ]
+    )
     return "\n".join(sections)
 
-def config_to_archive(
-        config: Configuration,
-        format: Literal["zip", "tar"] = "zip"
-) -> bytes:
+
+def config_to_archive(config: Configuration, format: Literal["zip", "tar"] = "zip") -> bytes:
     """
     Creates an archive containing configuration files from a Configuration instance.
     """
     buffer = io.BytesIO()
 
     if format == "zip":
-        with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
             for config_type in CONFIG_TYPES:
                 content = getattr(config, config_type)
                 archive.writestr(f"{config_type}.cfg", content)
             archive.writestr("readme.txt", config_to_readme(config))
 
     elif format == "tar":
-        with tarfile.open(fileobj=buffer, mode='w:gz') as archive:
+        with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
             for config_type in CONFIG_TYPES:
                 content = getattr(config, config_type)
                 content_buffer = io.BytesIO(content)

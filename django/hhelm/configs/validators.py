@@ -3,9 +3,10 @@ from enum import Enum
 from typing import Dict, List, Literal
 
 import hermes
-from hermes.payloads import UNBOND
 from hermes.configs import bytest_to_bitdict_asic
 from hermes.configs import parse_bitdict_asic
+from hermes.payloads import UNBOND
+
 
 class Status(Enum):
     PASSED = 0
