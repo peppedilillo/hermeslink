@@ -69,6 +69,7 @@ def validate_config_model(model: Literal[*SPACECRAFTS_NAMES]) -> bool:
     return model in model_keys
 
 
+# TODO: consider if worth to give this check more depth
 def validate_config_data(config_data: dict[str, str]):
     """Checks config data to contain the right keys."""
     return all(c in config_data for c in CONFIG_TYPES)
