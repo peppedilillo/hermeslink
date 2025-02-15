@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Dict
 
 
-CONFIG_TYPES = ("acq", "acq0", "asic0", "asic1", "bee",)
+CONFIG_TYPES = tuple(sorted(("acq", "acq0", "asic0", "asic1", "bee")))
 CONFIG_SIZE = {
     "acq": 20,
     "acq0": 20,

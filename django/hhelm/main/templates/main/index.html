@@ -3,6 +3,8 @@
   {% include "navbar.html" %}
 
   <h1>Welcome</h1>
-    <p>Go to <a href="/grafana/d/sensor-data">dashboard</a> or try <a href="{% url 'configs:upload' %}">upload</a> a file.</p>
+    <p>Go to <a href="/grafana/d/sensor-data">dashboard</a>,
+        or <a href="{% url 'configs:upload' %}">upload</a> a new configuration,
+        or check configuration <a href="{% url 'configs:history' %}">history</a>.</p>
 
 {% endblock %}

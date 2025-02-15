@@ -541,6 +541,7 @@ class ConfigurationViewTest(TestCase):
         self.assertRedirects(response, reverse('configs:test'))
 
         self.assertIn('config_id', self.client.session)
+        self.assertIn('config_hash', self.client.session)
         self.assertIn('config_model', self.client.session)
 
     def test_upload_view_post_error(self):
@@ -573,6 +574,7 @@ class ConfigurationViewTest(TestCase):
         _ = self.login_and_upload_fileset('H6', self.files_fm6)
         session_data = {
             'config_id': self.client.session['config_id'],
+            'config_hash': self.client.session['config_hash'],
             'config_model': self.client.session['config_model']
         }
 
@@ -707,7 +709,7 @@ class ConfigurationViewTest(TestCase):
         _ = self.client.post(reverse('configs:deliver'), data=form_data)
 
         self.assertNotIn('config_id', self.client.session)
-        self.assertNotIn('config_files', self.client.session)
+        self.assertNotIn('config_hash', self.client.session)
         self.assertNotIn('config_model', self.client.session)
 
     def test_file_content_preservation(self):
@@ -738,7 +740,7 @@ class ConfigurationViewTest(TestCase):
 
         session = self.client.session
         session['config_id'] = 'invalid-id'
-        session['config_files'] = {'invalid': 'path'}
+        session['config_hash'] = 'invalid-hash'
         session['config_model'] = 'invalid-model'
         session.save()
 
@@ -893,6 +895,7 @@ class ConfigurationEmailTest(TestCase):
 
             # Session should still be valid
             self.assertIn('config_id', self.client.session)
+            self.assertIn('config_hash', self.client.session)
             self.assertIn('config_model', self.client.session)
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')

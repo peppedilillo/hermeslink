@@ -1,13 +1,16 @@
 from pathlib import Path
+from collections import OrderedDict
 from shutil import rmtree
 from smtplib import SMTPException
 from typing import Literal
 import uuid
+from hashlib import sha256
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import FileSystemStorage
 from django.core.mail import EmailMessage
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.http import HttpRequest
 from django.http import HttpResponse
@@ -20,16 +23,17 @@ from hermes import payloads
 from . import forms
 from . import models
 from . import validators
+from .models import Configuration, config_to_sha256
 
 
 def config_dir_path(config_id: str) -> Path:
     """Return the path of the config directory on file system."""
     return Path(FileSystemStorage().location) / f"configs/{config_id}"
 
-def config_files_path(config_id: str) -> dict[str, Path]:
+def config_files_path(config_id: str) -> OrderedDict[str, Path]:
     """Return a dictionary of the path to the config files on file system."""
     config_dir = config_dir_path(config_id)
-    return {c: config_dir / f"{c}.cfg" for c in CONFIG_TYPES}
+    return OrderedDict((c, config_dir / f"{c}.cfg") for c in CONFIG_TYPES)
 
 @login_required
 def upload(request: HttpRequest) -> HttpResponse:
@@ -45,12 +49,16 @@ def upload(request: HttpRequest) -> HttpResponse:
             upload_dir = config_dir_path(config_id)
             upload_dir.mkdir(exist_ok=False, parents=True)
 
+            hasher = sha256()
             files = config_files_path(config_id)
             for ftype, filepath in files.items():
                 with open(filepath, "wb") as f:
-                    f.write(form.cleaned_data[ftype].read())
+                    content = form.cleaned_data[ftype].read()
+                    hasher.update(content)
+                    f.write(content)
 
             request.session["config_id"] = config_id
+            request.session["config_hash"] = hasher.hexdigest()
             request.session["config_model"] = form.cleaned_data["model"]
             return redirect("configs:test")
         return render(request, "configs/upload.html", {'form': form})
@@ -74,10 +82,13 @@ def validate_config_id(config_id: str) -> bool:
     )
 
 def session_is_valid(request: HttpRequest) -> bool:
-    """Checks model to be well set and for all configuration file to be online."""
+    """
+    Checks hash to be present, model to be well set and all files to be online.
+    """
     if (
             ("config_model" in request.session and validate_config_model(request.session["config_model"])) and
-            ("config_id" in request.session and validate_config_id(request.session["config_id"]))
+            ("config_id" in request.session and validate_config_id(request.session["config_id"])) and
+            ("config_hash" in request.session)
     ):
         return True
     return False
@@ -102,6 +113,7 @@ def test(request: HttpRequest) -> HttpResponse:
     )
     request.session["can_proceed"] = can_proceed
 
+    # we will display file content
     contents = {}
     for ftype, fpath in config_files.items():
         with open(fpath, "rb") as f:
@@ -117,6 +129,8 @@ def test(request: HttpRequest) -> HttpResponse:
         },
     )
 
+class HashError(Exception):
+    """Inconsitent configuration hashes"""
 
 @login_required
 def deliver(request: HttpRequest) -> HttpResponse:
@@ -140,7 +154,7 @@ def deliver(request: HttpRequest) -> HttpResponse:
             email.attach_file(fpath)
         email.send()
 
-    def create_configuration():
+    def create_and_check_configuration():
         """Record delivered configuration to db."""
         config_entry = models.Configuration(
             author=request.user,
@@ -154,6 +168,10 @@ def deliver(request: HttpRequest) -> HttpResponse:
             file_path = Path(config_files[ftype])
             with open(file_path, "rb") as f:
                 setattr(config_entry, ftype, f.read())
+
+        record_hash, _ = config_to_sha256(config_entry, ordered_keys=config_files.keys())
+        if request.session["config_hash"] != record_hash:
+            raise HashError("Input file hash does not match configuration record.")
         return config_entry
 
     def commit_configuration(config_entry: models.Configuration):
@@ -184,11 +202,13 @@ def deliver(request: HttpRequest) -> HttpResponse:
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    config = create_configuration()
+                    config = create_and_check_configuration()
                     send_email()
                     commit_configuration(config)
                     cleanup()
-
+            except HashError as e:
+                print(f"Integrity error: {str(e)}")
+                return render(request, "configs/deliver_error.html", {"error": "Compromised input integrity."})
             except SMTPException as e:
                 print(f"Email delivery failed: {str(e)}")
                 return render(request, "configs/deliver_error.html", {"error": "Failed to send email"})
@@ -206,3 +226,43 @@ def deliver(request: HttpRequest) -> HttpResponse:
         "configs/deliver.html",
         {"form": form},
     )
+
+EMPTY_HISTORY_MESSAGE = "No configuration has been uploaded yet."
+
+@login_required
+def history(request: HttpRequest) -> HttpResponse:
+    """
+    View to display all recorded configurations.
+    """
+    configurations = models.Configuration.objects.order_by("-date")
+    paginator = Paginator(configurations, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+    return render(
+        request,
+        "configs/history.html",
+        {"page_obj": page_obj, "empty_message": EMPTY_HISTORY_MESSAGE},
+    )
+
+
+@login_required
+def download_config(request, config_id: int, format: Literal["zip", "tar"] = "zip"):
+    """
+    View function to download a configuration archive.
+    """
+    if format not in ["zip", "tar"]:
+        return HttpResponse("404: Invalid format specified", status=400)
+
+    try:
+        config = Configuration.objects.get(id=config_id)
+    except Configuration.DoesNotExist:
+        return HttpResponse("404: Configuration not found", status=404)
+
+    archive_content = models.config_to_archive(config, format)
+    filename = f"hermes_cfg_{config_id}.{'tar.gz' if format == 'tar' else 'zip'}"
+
+    response = HttpResponse(archive_content)
+    response['Content-Type'] = 'application/zip' if format == "zip" else 'application/x-tar'
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    return response
