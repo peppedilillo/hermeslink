@@ -1,14 +1,10 @@
-from pathlib import Path
 from collections import OrderedDict
-from shutil import rmtree
 from smtplib import SMTPException
 from typing import Literal
-import uuid
 from hashlib import sha256
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.core.files.storage import FileSystemStorage
 from django.core.mail import EmailMessage
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -17,47 +13,48 @@ from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.utils import timezone
-from hermes import CONFIG_TYPES
-from hermes import payloads
 
+from hermes import SPACECRAFTS_NAMES, CONFIG_TYPES
 from . import forms
 from . import models
 from . import validators
-from .models import Configuration, config_to_sha256
+from .models import Configuration, config_to_sha256, config_to_archive
 
 
-def config_dir_path(config_id: str) -> Path:
-    """Return the path of the config directory on file system."""
-    return Path(FileSystemStorage().location) / f"configs/{config_id}"
+def encode_config_data(config_data: OrderedDict[str, bytes]) -> dict[str, str]:
+    """Encodes binary configuration data for session storage using hex"""
+    return OrderedDict(
+        (ftype, content.hex())
+        for ftype, content in config_data.items()
+    )
 
-def config_files_path(config_id: str) -> OrderedDict[str, Path]:
-    """Return a dictionary of the path to the config files on file system."""
-    config_dir = config_dir_path(config_id)
-    return OrderedDict((c, config_dir / f"{c}.cfg") for c in CONFIG_TYPES)
+def decode_config_data(encoded_data: OrderedDict[str, str]) -> dict[str, bytes]:
+    """Decodes hex-encoded configuration data from session storage"""
+    return OrderedDict(
+        (ftype, bytes.fromhex(content))
+        for ftype, content in encoded_data.items()
+    )
 
 @login_required
 def upload(request: HttpRequest) -> HttpResponse:
     """
-    This view is intended to accept configuration files for a target model
-    from the user, store them in memory and return them to the next view.
+    This view is intended to accept configuration files for a target model from the user,
+    store them in memory and move the user to the next view.
     """
     if request.method == "POST":
         form = forms.UploadConfiguration(request.POST, request.FILES)
         # form will perform file size validation
         if form.is_valid():
-            config_id = str(uuid.uuid4())
-            upload_dir = config_dir_path(config_id)
-            upload_dir.mkdir(exist_ok=False, parents=True)
-
             hasher = sha256()
-            files = config_files_path(config_id)
-            for ftype, filepath in files.items():
-                with open(filepath, "wb") as f:
-                    content = form.cleaned_data[ftype].read()
-                    hasher.update(content)
-                    f.write(content)
+            config_data = OrderedDict()
 
-            request.session["config_id"] = config_id
+            # we compute an hash as we first cycle through the uploaded files
+            for ftype in CONFIG_TYPES:
+                content = form.cleaned_data[ftype].read()
+                config_data[ftype] = content
+                hasher.update(content)
+
+            request.session["config_data"] = encode_config_data(config_data)
             request.session["config_hash"] = hasher.hexdigest()
             request.session["config_model"] = form.cleaned_data["model"]
             return redirect("configs:test")
@@ -66,20 +63,15 @@ def upload(request: HttpRequest) -> HttpResponse:
     form = forms.UploadConfiguration()
     return render(request, "configs/upload.html", {"form": form})
 
-def validate_config_model(model: Literal[*payloads.NAMES]) -> bool:
+def validate_config_model(model: Literal[*SPACECRAFTS_NAMES]) -> bool:
     """Checks config model to be allowed"""
     model_keys, _  = zip(*models.Configuration.MODELS)
     return model in model_keys
 
-def validate_config_id(config_id: str) -> bool:
-    """Checks config ID to map to directory containing all configuration files."""
-    config_files = config_files_path(config_id)
-    return (
-        # user provided all the necessary files
-        all(c in config_files for c in CONFIG_TYPES) and
-        # the files exists on filesystem
-        all(Path(v).is_file() for v in config_files.values())
-    )
+def validate_config_data(config_data: dict[str, str]):
+    """Checks config data to contain the right keys."""
+    return all(c in config_data for c in CONFIG_TYPES)
+
 
 def session_is_valid(request: HttpRequest) -> bool:
     """
@@ -87,7 +79,7 @@ def session_is_valid(request: HttpRequest) -> bool:
     """
     if (
             ("config_model" in request.session and validate_config_model(request.session["config_model"])) and
-            ("config_id" in request.session and validate_config_id(request.session["config_id"])) and
+            ("config_data" in request.session and validate_config_data(request.session["config_data"])) and
             ("config_hash" in request.session)
     ):
         return True
@@ -104,27 +96,20 @@ def test(request: HttpRequest) -> HttpResponse:
     if not session_is_valid(request):
         return redirect("configs:upload")
 
-    config_files = config_files_path(request.session["config_id"])
-
     # we sanity check the configuration file content
-    results, can_proceed = validators.validate_configuration(
-        config_files,
+    results, can_proceed = validators.validate_configurations(
+        decode_config_data(request.session["config_data"]),
         request.session["config_model"],
     )
     request.session["can_proceed"] = can_proceed
-
-    # we will display file content
-    contents = {}
-    for ftype, fpath in config_files.items():
-        with open(fpath, "rb") as f:
-            contents[ftype] = f.read().hex()
 
     return render(
         request,
         "configs/test.html",
         {
             "results": results,
-            "contents": contents,
+            # contents is for displaying, we just spit out the hex encoded file content
+            "contents": request.session["config_data"],
             "can_proceed": can_proceed,
         },
     )
@@ -141,7 +126,7 @@ def deliver(request: HttpRequest) -> HttpResponse:
     taken to an error page, else a success page is shown.
     """
 
-    def send_email():
+    def send_email(config_entry: Configuration):
         """Prepares the email with the configuration attachments."""
         email = EmailMessage(
             subject=form.cleaned_data["subject"],
@@ -150,12 +135,14 @@ def deliver(request: HttpRequest) -> HttpResponse:
             cc=form.cleaned_data["cc"],
             to=(form.cleaned_data["recipient"],),
         )
-        for _, fpath in config_files.items():
-            email.attach_file(fpath)
+        archive_content = config_to_archive(config_entry, "zip")
+        email.attach('hermes_cfg.zip', archive_content, 'application/zip')
         email.send()
 
     def create_and_check_configuration():
         """Record delivered configuration to db."""
+        config_data = decode_config_data(request.session["config_data"])
+
         config_entry = models.Configuration(
             author=request.user,
             delivered=False,
@@ -164,27 +151,26 @@ def deliver(request: HttpRequest) -> HttpResponse:
             upload_time=None,
             model=request.session["config_model"],
         )
-        for ftype in CONFIG_TYPES:
-            file_path = Path(config_files[ftype])
-            with open(file_path, "rb") as f:
-                setattr(config_entry, ftype, f.read())
+        for ftype, content in config_data.items():
+            setattr(config_entry, ftype, content)
 
-        record_hash, _ = config_to_sha256(config_entry, ordered_keys=config_files.keys())
+        record_hash, _ = config_to_sha256(
+            config_entry,
+            ordered_keys=config_data.keys(),
+        )
         if request.session["config_hash"] != record_hash:
             raise HashError("Input file hash does not match configuration record.")
         return config_entry
 
     def commit_configuration(config_entry: models.Configuration):
+        """Commit configuration to db"""
         config_entry.delivered = True
         config_entry.deliver_time = timezone.now()
         config_entry.save()
 
     def cleanup():
-        """Cleans up temporary files and resets session."""
-        upload_dir = config_dir_path(request.session["config_id"])
-        if upload_dir.exists():  # Only cleanup if directory exists
-            rmtree(upload_dir)
-        for key in ["config_id", "config_model", "can_proceed"]:
+        """Cleans up session data."""
+        for key in ["config_model", "config_data", "config_hash", "can_proceed"]:
             request.session.pop(key, None)  # Safely remove keys
 
 
@@ -195,15 +181,13 @@ def deliver(request: HttpRequest) -> HttpResponse:
         return redirect("configs:test")
 
 
-    config_files = config_files_path(request.session["config_id"])
-
     if request.method == "POST":
         form = forms.DeliverConfiguration(request.POST)
         if form.is_valid():
             try:
                 with transaction.atomic():
                     config = create_and_check_configuration()
-                    send_email()
+                    send_email(config)
                     commit_configuration(config)
                     cleanup()
             except HashError as e:
@@ -212,9 +196,6 @@ def deliver(request: HttpRequest) -> HttpResponse:
             except SMTPException as e:
                 print(f"Email delivery failed: {str(e)}")
                 return render(request, "configs/deliver_error.html", {"error": "Failed to send email"})
-            except IOError as e:
-                print(f"File operation failed: {str(e)}")
-                return render(request, "configs/deliver_error.html", {"error": "Failed to process files"})
             except Exception as e:
                 print(f"Unexpected error during delivery: {str(e)}")
                 return render(request, "configs/deliver_error.html", {"error": "An unexpected error occurred"})
@@ -251,7 +232,7 @@ def download_config(request, config_id: int, format: Literal["zip", "tar"] = "zi
     View function to download a configuration archive.
     """
     if format not in ["zip", "tar"]:
-        return HttpResponse("404: Invalid format specified", status=400)
+        return HttpResponse("400: Invalid format specified", status=400)
 
     try:
         config = Configuration.objects.get(id=config_id)

@@ -1,6 +1,4 @@
 from functools import reduce
-from pathlib import Path
-from typing import Dict
 
 
 CONFIG_TYPES = tuple(sorted(("acq", "acq0", "asic0", "asic1", "bee")))
@@ -13,14 +11,13 @@ CONFIG_SIZE = {
 }
 
 
-def filepath_to_bitdict_asic(filepath: Path) -> Dict[str, str]:
+def bytest_to_bitdict_asic(bstr: bytes) -> dict[str, str]:
     """
-    Takes an asic configuration file and transforms it into a dictionary of strings.
-    The dictionary has key for different quadrants, and binary (01 format) strings
-    for values.
+    Takes the bytes content of an asic configuration file and transforms it into a
+    dictionary of strings. The dictionary has key for different quadrants, and binary
+    (01 format) strings for values.
     """
-    with open(filepath, "rb") as f:
-        return {quad: "".join([format(b, "08b") for b in f.read(31)]) for quad in "ABCD"}
+    return {quad: "".join([format(b, "08b") for b in bstr[i*31: (i+1)*31]]) for i, quad in enumerate("ABCD")}
 
 
 _SLICES_ASIC = {
@@ -32,7 +29,7 @@ _SLICES_ASIC = {
 }
 
 
-def parse_bitdict_asic(bitdict: Dict[str, str]) -> Dict[str, Dict[str, str]]:
+def parse_bitdict_asic(bitdict: dict[str, str]) -> dict[str, dict[str, str]]:
     """
     Transforms a asic configuration dictionary into a nested dictionary representing
     a parsed asic configuration. Inner keys represent different sections of the

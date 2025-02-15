@@ -1,14 +1,11 @@
 from dataclasses import dataclass
 from enum import Enum
-import os
-from pathlib import Path
-from telnetlib import STATUS
 from typing import Dict, List, Literal
 
-from hermes import payloads as payloads
-from hermes.configs import filepath_to_bitdict_asic
+import hermes
+from hermes.payloads import UNBOND
+from hermes.configs import bytest_to_bitdict_asic
 from hermes.configs import parse_bitdict_asic
-
 
 class Status(Enum):
     PASSED = 0
@@ -23,15 +20,15 @@ class TestResult:
 
 
 def test_asic1_unbounded_discriminators_are_off(
-    asic1_bitdict: dict,
-    model: Literal[*payloads.NAMES],
+    asic1_bitdict: dict[str, dict[str, str]],
+    model: Literal[hermes.SPACECRAFTS_NAMES],
 ) -> TestResult:
     # useful for making sure we are not passing asic configurations for a different payload.
     warn_about_channels = []
-    for q, qmap in payloads.MAPS[model].items():
+    for q, qmap in hermes.DETECTOR_MAPS[model].items():
         assert len(asic1_bitdict[q]["discriminators"]) == len(qmap)
         for ch, (bit, channel_mapping) in enumerate(zip(asic1_bitdict[q]["discriminators"], qmap)):
-            if channel_mapping == payloads.UNBOND and not int(bit):  # 0 is for enabled discriminator
+            if channel_mapping == UNBOND and not int(bit):  # 0 is for enabled discriminator
                 warn_about_channels.append((q, ch))
     if warn_about_channels:
         return TestResult(
@@ -43,12 +40,12 @@ def test_asic1_unbounded_discriminators_are_off(
 
 
 def test_asic0_trigger_logic_is_internal_or(
-    asic0_bitdict: dict,
-    model: Literal[*payloads.NAMES],
+    asic0_bitdict: dict[str, dict[str, str]],
+    model: Literal[*hermes.SPACECRAFTS_NAMES],
 ) -> TestResult:
     # if trigger logic is not set to internal or, the configuration is not asic0
     warn_about_quadrants = []
-    for q in payloads.MAPS[model].keys():
+    for q in hermes.DETECTOR_MAPS[model].keys():
         if asic0_bitdict[q]["trigger_logic"] != "10":
             warn_about_quadrants.append(q)
     if warn_about_quadrants:
@@ -61,12 +58,12 @@ def test_asic0_trigger_logic_is_internal_or(
 
 
 def test_asic1_trigger_logic_is_internal_single(
-    asic0_bitdict: dict,
-    model: Literal[*payloads.NAMES],
+    asic0_bitdict: dict[str, dict[str, str]],
+    model: Literal[*hermes.SPACECRAFTS_NAMES],
 ) -> TestResult:
     # if trigger logic is not set to internal single, the configuration is not asic1
     warn_about_quadrants = []
-    for q in payloads.MAPS[model].keys():
+    for q in hermes.DETECTOR_MAPS[model].keys():
         if asic0_bitdict[q]["trigger_logic"] != "01":
             warn_about_quadrants.append(q)
     if warn_about_quadrants:
@@ -79,29 +76,30 @@ def test_asic1_trigger_logic_is_internal_single(
 
 
 def test_acq_size(
-    filepath: Path,
+    bstr: bytes,
 ) -> TestResult:
     # we double check size both to be extra-sure and for displaying purpose
-    if (size_bytes := os.path.getsize(filepath)) != 20:
-        return TestResult(Status.ERROR, f"File size is {size_bytes} bytes. Expected 20 bytes.")
+    if len(bstr) != hermes.CONFIG_SIZE["acq"]:
+        return TestResult(Status.ERROR, f"File size is {len(bstr)} bytes. Expected 20 bytes.")
     return TestResult(Status.PASSED, "File size is 20 bytes as expected.")
 
 
 def test_asic_size(
-    filepath: Path,
+    bstr: bytes,
 ) -> TestResult:
     # we double check size both to be extra-sure and for displaying purpose
-    if (size_bytes := os.path.getsize(filepath)) != 124:
-        return TestResult(Status.ERROR, f"File size is {size_bytes} bytes. Expected 124 bytes.")
+    if len(bstr) != hermes.CONFIG_SIZE["asic0"]:
+        assert len(bstr) != hermes.CONFIG_SIZE["asic1"]
+        return TestResult(Status.ERROR, f"File size is {len(bstr)} bytes. Expected 124 bytes.")
     return TestResult(Status.PASSED, "File size is 124 bytes as expected.")
 
 
 def test_bee_size(
-    filepath: Path,
+    bstr: bytes,
 ) -> TestResult:
     # we double check size both to be extra-sure and for displaying purpose
-    if (size_bytes := os.path.getsize(filepath)) != 64:
-        return TestResult(Status.ERROR, f"File size is {size_bytes} bytes. Expected 64 bytes.")
+    if len(bstr) != hermes.CONFIG_SIZE["bee"]:
+        return TestResult(Status.ERROR, f"File size is {len(bstr)} bytes. Expected 64 bytes.")
     return TestResult(Status.PASSED, "File size is 64 bytes as expected.")
 
 
@@ -110,33 +108,33 @@ def serialize(tr: TestResult):
     return {"status": tr.status.name, "message": tr.message}
 
 
-def validate_configuration(
-    filesdict: Dict[str, Path],
-    model: Literal[*payloads.NAMES],
+def validate_configurations(
+    bytesdict: dict[str, bytes],
+    model: Literal[*hermes.SPACECRAFTS_NAMES],
 ) -> tuple[Dict[str, List[tuple[str, str]]], bool]:
     """
     Validates a configuration and returns test results and a boolean pass.
     """
-    asic1_bitdict = parse_bitdict_asic(filepath_to_bitdict_asic(filesdict["asic1"]))
-    asic0_bitdict = parse_bitdict_asic(filepath_to_bitdict_asic(filesdict["asic0"]))
+    asic1_bitdict = parse_bitdict_asic(bytest_to_bitdict_asic(bytesdict["asic1"]))
+    asic0_bitdict = parse_bitdict_asic(bytest_to_bitdict_asic(bytesdict["asic0"]))
     test_results = {
         "acq": [
-            test_acq_size(filesdict["acq"]),
+            test_acq_size(bytesdict["acq"]),
         ],
         "acq0": [
-            test_acq_size(filesdict["acq0"]),
+            test_acq_size(bytesdict["acq0"]),
         ],
         "asic1": [
-            test_asic_size(filesdict["asic1"]),
+            test_asic_size(bytesdict["asic1"]),
             test_asic1_unbounded_discriminators_are_off(asic1_bitdict, model),
             test_asic1_trigger_logic_is_internal_single(asic1_bitdict, model),
         ],
         "asic0": [
-            test_asic_size(filesdict["asic0"]),
+            test_asic_size(bytesdict["asic0"]),
             test_asic0_trigger_logic_is_internal_or(asic0_bitdict, model),
         ],
         "bee": [
-            test_bee_size(filesdict["bee"]),
+            test_bee_size(bytesdict["bee"]),
         ],
     }
     can_proceed = not any([r.status == Status.ERROR for k, v in test_results.items() for r in v])

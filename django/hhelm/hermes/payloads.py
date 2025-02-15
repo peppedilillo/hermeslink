@@ -117,5 +117,4 @@ _map_h6 = {
 }
 
 
-NAMES = ("H1", "H2", "H3", "H4", "H5", "H6")
-MAPS = dict(zip(NAMES, (_map_h1, _map_h2, _map_h3, _map_h4, _map_h5, _map_h6)))
+_maps = (_map_h1, _map_h2, _map_h3, _map_h4, _map_h5, _map_h6)

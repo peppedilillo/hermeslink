@@ -3,8 +3,8 @@ from typing import Literal, Iterable
 from django.core.validators import MinLengthValidator
 from django.db import models
 from hashlib import sha256
-from hermes import CONFIG_TYPES
-import hermes.payloads
+
+from hermes import CONFIG_TYPES, SPACECRAFTS_NAMES
 from hhelm.settings import AUTH_USER_MODEL
 import zipfile, tarfile, io
 
@@ -20,7 +20,7 @@ class Configuration(models.Model):
     on the uploaded status, which should supposedly come with a timestamp (`upload_time`)
     """
 
-    MODELS = tuple(zip(hermes.payloads.NAMES, hermes.payloads.NAMES))
+    MODELS = tuple(zip(SPACECRAFTS_NAMES, SPACECRAFTS_NAMES))
 
     date = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(to=CustomUser, related_name="configurations", on_delete=models.PROTECT)
