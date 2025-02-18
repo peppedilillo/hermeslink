@@ -5,21 +5,30 @@ MODEL TESTS:
 * Test that a configuration can be created with valid data
 * Test that binary data is preserved correctly when stored and retrieved
 * Test that only valid satellite model choices (H1-H6) are accepted
-* Test that binary fields enforce exact size constraints (ACQ: 20 bytes, ASIC: 124 bytes, BEE: 64 bytes)
+* Test that binary fields enforce exact size constraints
+* Test that at least one configuration file must be provided
 * Test that configurations are protected from author deletion via foreign key constraints
 * Test that creation timestamp is automatically assigned
 * Test that delivery and upload flags default to False with null timestamps
 * Test that delivery and upload timestamps can be properly set and retrieved
+* Test that partial configurations can be created and stored
 
 FORM TESTS:
 * Test file upload form validation including file size constraints
+* Test file upload form handling of optional configurations:
+  - No files provided
+  - Single file provided
+  - Partial file sets provided
 * Test satellite model selection validation
 * Test email delivery form validation including CC field formatting
 
 VIEWS TESTS:
 * Test authentication requirements for all views
 * Test view access and template usage
-* Test successful file upload flow and session data creation
+* Test successful file upload flow and session data creation:
+  - Complete configuration sets
+  - Single configuration files
+  - Various combinations of configuration files
 * Test session data handling and validation:
   - Missing session data
   - Invalid session data format
@@ -31,12 +40,17 @@ VIEWS TESTS:
   - Wrong ASIC0/ASIC1 configurations
 * Test file content preservation throughout the process
 * Test session cleanup after delivery
+* Test session expiration at logout
 
 EMAIL DELIVERY TESTS:
 * Test successful email delivery with correct attachments
 * Test email content verification
 * Test CC field handling
 * Test failure handling and rollback
+* Test partial configuration delivery:
+  - Correct archive contents
+  - Database record accuracy
+  - Email attachment verification
 """
 
 from io import BytesIO
@@ -195,7 +209,6 @@ class ConfigurationModelTest(TestCase):
         )
         self.assertTrue(isinstance(partial_config, Configuration))
 
-
     def test_clean_validation_requires_at_least_one_config(self):
         """Test that at least one configuration file must be provided"""
         with self.assertRaises(ValidationError):
@@ -204,6 +217,7 @@ class ConfigurationModelTest(TestCase):
                 model="H1",
             )
             config.full_clean()
+
 
 class ConfigurationFormTest(TestCase):
     @classmethod
