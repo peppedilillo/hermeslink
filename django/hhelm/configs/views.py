@@ -48,7 +48,7 @@ def upload(request: HttpRequest) -> HttpResponse:
             hasher = sha256()
             config_data = OrderedDict()
 
-            # we compute an hash as we first cycle through the uploaded files
+            # we compute a hash as we first cycle through the uploaded files
             for ftype in CONFIG_TYPES:
                 content = form.cleaned_data[ftype].read()
                 config_data[ftype] = content
