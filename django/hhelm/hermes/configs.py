@@ -1,12 +1,15 @@
 from functools import reduce
 
-CONFIG_TYPES = tuple(sorted(("acq", "acq0", "asic0", "asic1", "bee")))
+
+CONFIG_TYPES = tuple(sorted(("acq", "acq0", "asic0", "asic1", "bee", "liktrg", "obs")))
 CONFIG_SIZE = {
     "acq": 20,
     "acq0": 20,
     "asic0": 124,
     "asic1": 124,
     "bee": 64,
+    "obs": 5,
+    "liktrg": 38,
 }
 
 

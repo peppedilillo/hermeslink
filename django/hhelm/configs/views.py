@@ -50,9 +50,10 @@ def upload(request: HttpRequest) -> HttpResponse:
 
             # we compute a hash as we first cycle through the uploaded files
             for ftype in CONFIG_TYPES:
-                content = form.cleaned_data[ftype].read()
-                config_data[ftype] = content
-                hasher.update(content)
+                if form.cleaned_data.get(ftype) is not None:
+                    content = form.cleaned_data[ftype].read()
+                    config_data[ftype] = content
+                    hasher.update(content)
 
             request.session["config_data"] = encode_config_data(config_data)
             request.session["config_hash"] = hasher.hexdigest()
@@ -72,8 +73,8 @@ def validate_config_model(model: Literal[*SPACECRAFTS_NAMES]) -> bool:
 
 # TODO: consider if worth to give this check more depth
 def validate_config_data(config_data: dict[str, str]):
-    """Checks config data to contain the right keys."""
-    return all(c in config_data for c in CONFIG_TYPES)
+    """Verifies that at least one configuration file is present in the data."""
+    return any(config_data)
 
 
 def session_is_valid(request: HttpRequest) -> bool:
@@ -87,12 +88,6 @@ def session_is_valid(request: HttpRequest) -> bool:
     ):
         return True
     return False
-
-
-
-def serialize(tr: TestResult):
-    # since we are going to display results in a template, we need them to be serializable
-    return {"status": tr.status.name, "message": tr.message}
 
 
 @login_required
@@ -210,7 +205,6 @@ def deliver(request: HttpRequest) -> HttpResponse:
                     commit_configuration(config)
                     cleanup()
 
-                    print("hello", request.session.keys())
             except HashError as e:
                 print(f"Integrity error: {str(e)}")
                 return render(request, "configs/deliver_error.html", {"error": "Compromised input integrity."})

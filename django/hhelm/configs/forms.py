@@ -48,13 +48,25 @@ class UploadConfiguration(forms.Form):
     """
     A form for uploading configuration files for a specific payload model.
     """
-
     model = forms.ChoiceField(choices=Configuration.MODELS)
-    acq0 = forms.FileField(validators=[lambda f: check_length(f, "acq0")])
-    acq = forms.FileField(validators=[lambda f: check_length(f, "acq")])
-    asic0 = forms.FileField(validators=[lambda f: check_length(f, "asic0")])
-    asic1 = forms.FileField(validators=[lambda f: check_length(f, "asic1")])
-    bee = forms.FileField(validators=[lambda f: check_length(f, "bee")])
+
+    acq0 = forms.FileField(required=False, validators=[lambda f: check_length(f, "acq0") if f else None])
+    acq = forms.FileField(required=False, validators=[lambda f: check_length(f, "acq0") if f else None])
+    asic0 = forms.FileField(required=False, validators=[lambda f: check_length(f, "asic0") if f else None])
+    asic1 = forms.FileField(required=False, validators=[lambda f: check_length(f, "asic1") if f else None])
+    bee = forms.FileField(required=False, validators=[lambda f: check_length(f, "bee") if f else None])
+    liktrg = forms.FileField(required=False, validators=[lambda f: check_length(f, "liktrg") if f else None])
+    obs = forms.FileField(required=False, validators=[lambda f: check_length(f, "obs") if f else None])
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        if not any(cleaned_data.get(ftype) for ftype in CONFIG_TYPES):
+            raise forms.ValidationError(
+                "At least one configuration file must be provided."
+            )
+
+        return cleaned_data
 
 
 class DeliverConfiguration(forms.Form):

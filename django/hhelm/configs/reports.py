@@ -210,7 +210,6 @@ def format_report_to_html(
         fileline += f"$Test results:\n"
         for test in test_results.setdefault(ftype, []):
             fileline += f"$$Test {test.status.name} : {test.message}\n"
-        fileline += f"\n\n"
         report += fileline
         fileline = ""
 

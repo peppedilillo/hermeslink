@@ -7,6 +7,40 @@ from hermes.configs import bytest_to_bitdict_asic
 from hermes.configs import parse_bitdict_asic
 from hermes.payloads import UNBOND
 
+def crc16(data: bytes) -> bytes:
+    """
+    Calculate CRC16-CCITT (0xFFFF initial value, polynomial 0x1021)
+    """
+    if not isinstance(data, bytes):
+        raise ValueError("Input must be bytes")
+
+    crc = 0xFFFF
+    poly = 0x1021  # CRC16-CCITT polynomial
+
+    for byte in data:
+        byte = byte & 0xFF
+        mask = 0x80
+
+        # process each bit
+        for _ in range(8):
+            xor_flag = bool(crc & 0x8000)
+            crc = (crc << 1) & 0xFFFF
+
+            if byte & mask:
+                crc = (crc + 1) & 0xFFFF
+            if xor_flag:
+                crc = (crc ^ poly) & 0xFFFF
+
+            mask = (mask >> 1) & 0xFF
+
+    # final 16 shifts
+    for _ in range(16):
+        xor_flag = bool(crc & 0x8000)
+        crc = (crc << 1) & 0xFFFF
+        if xor_flag:
+            crc = (crc ^ poly) & 0xFFFF
+
+    return crc.to_bytes(2, byteorder='big')
 
 class Status(int, Enum):
     PASSED = 0
@@ -76,32 +110,44 @@ def test_asic1_trigger_logic_is_internal_single(
     return TestResult(Status.PASSED, "Trigger logic is set to `internal single`.")
 
 
+def _test_size(
+    bstr: bytes,
+    ftype: Literal[*hermes.CONFIG_SIZE],
+):
+    # we double check size both to be extra-sure and for displaying purpose
+    if len(bstr) != hermes.CONFIG_SIZE[ftype]:
+        return TestResult(Status.ERROR, f"File size is {len(bstr)} bytes. Expected {hermes.CONFIG_SIZE[ftype]} bytes.")
+    return TestResult(Status.PASSED, f"File size is {hermes.CONFIG_SIZE[ftype]} bytes as expected.")
+
+
 def test_acq_size(
     bstr: bytes,
 ) -> TestResult:
-    # we double check size both to be extra-sure and for displaying purpose
-    if len(bstr) != hermes.CONFIG_SIZE["acq"]:
-        return TestResult(Status.ERROR, f"File size is {len(bstr)} bytes. Expected 20 bytes.")
-    return TestResult(Status.PASSED, "File size is 20 bytes as expected.")
+    return _test_size(bstr, "acq")
 
 
 def test_asic_size(
     bstr: bytes,
 ) -> TestResult:
-    # we double check size both to be extra-sure and for displaying purpose
-    if len(bstr) != hermes.CONFIG_SIZE["asic0"]:
-        assert len(bstr) != hermes.CONFIG_SIZE["asic1"]
-        return TestResult(Status.ERROR, f"File size is {len(bstr)} bytes. Expected 124 bytes.")
-    return TestResult(Status.PASSED, "File size is 124 bytes as expected.")
+    return _test_size(bstr, "asic1")
 
 
 def test_bee_size(
     bstr: bytes,
 ) -> TestResult:
-    # we double check size both to be extra-sure and for displaying purpose
-    if len(bstr) != hermes.CONFIG_SIZE["bee"]:
-        return TestResult(Status.ERROR, f"File size is {len(bstr)} bytes. Expected 64 bytes.")
-    return TestResult(Status.PASSED, "File size is 64 bytes as expected.")
+    return _test_size(bstr, "bee")
+
+
+def test_obs_size(
+    bstr: bytes,
+) -> TestResult:
+    return _test_size(bstr, "obs")
+
+
+def test_liktrg_size(
+    bstr: bytes,
+) -> TestResult:
+    return _test_size(bstr, "liktrg")
 
 
 def serialize(tr: TestResult):
@@ -116,27 +162,31 @@ def validate_configurations(
     """
     Validates a configuration and returns test results and a boolean pass.
     """
-    asic1_bitdict = parse_bitdict_asic(bytest_to_bitdict_asic(bytesdict["asic1"]))
-    asic0_bitdict = parse_bitdict_asic(bytest_to_bitdict_asic(bytesdict["asic0"]))
-    test_results = {
+    test_map = {
         "acq": [
-            test_acq_size(bytesdict["acq"]),
+            lambda: test_acq_size(bytesdict["acq"]),
         ],
         "acq0": [
-            test_acq_size(bytesdict["acq0"]),
+            lambda: test_acq_size(bytesdict["acq0"]),
         ],
         "asic1": [
-            test_asic_size(bytesdict["asic1"]),
-            test_asic1_unbounded_discriminators_are_off(asic1_bitdict, model),
-            test_asic1_trigger_logic_is_internal_single(asic1_bitdict, model),
+            lambda: test_asic_size(bytesdict["asic1"]),
+            lambda: test_asic1_unbounded_discriminators_are_off(parse_bitdict_asic(bytest_to_bitdict_asic(bytesdict["asic1"])), model),
+            lambda: test_asic1_trigger_logic_is_internal_single(parse_bitdict_asic(bytest_to_bitdict_asic(bytesdict["asic1"])), model),
         ],
         "asic0": [
-            test_asic_size(bytesdict["asic0"]),
-            test_asic0_trigger_logic_is_internal_or(asic0_bitdict, model),
+            lambda: test_asic_size(bytesdict["asic0"]),
+            lambda: test_asic0_trigger_logic_is_internal_or(parse_bitdict_asic(bytest_to_bitdict_asic(bytesdict["asic0"])), model),
         ],
         "bee": [
-            test_bee_size(bytesdict["bee"]),
+            lambda: test_bee_size(bytesdict["bee"]),
+        ],
+        "obs": [
+            lambda: test_obs_size(bytesdict["obs"]),
+        ],
+        "liktrg": [
+            lambda: test_liktrg_size(bytesdict["liktrg"]),
         ],
     }
-    return test_results
 
+    return {ftype: [f() for f in test_map[ftype]] for ftype in bytesdict.keys()}

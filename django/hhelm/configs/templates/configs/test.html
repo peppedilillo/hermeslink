@@ -3,11 +3,14 @@
 
 <h1 class="font-bold text-4xl mb-6">Configuration test</h1>
     <div class="mb-6">
-    {% if can_proceed %}
-        You can proceed submitting this configuration.<br>
-        Please check the test report for possible warnings.
-    {% else %}
-        You configuration contains errors and cannot be submitted.
+    {% if request.session.test_status == 0 %}
+        All tests <span class="text-green-500"><b>passed</b></span> successfully, you can proceed submitting this configuration.
+    {% elif request.session.test_status == 1  %}
+        You configuration contains <span class="text-yellow-500"><b>warning</b></span> but you can still submit it.<br>
+        Please give a look to the attached report and carefully review the reason for these warnings before submitting.
+    {% elif request.session.test_status == 2 %}
+        Your configuration contains <span class="text-red-500"><b>errors</b></span> and can not be submitted.<br>
+        Please give a look to the attached report and carefully, review the errors there and try uploading a new configuration.
     {% endif %}
     </div>
     

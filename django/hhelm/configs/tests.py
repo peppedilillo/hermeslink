@@ -75,9 +75,11 @@ class ConfigurationModelTest(TestCase):
     def setUpTestData(cls):
         cls.test_user = User.objects.create_user(username="testuser", password="testpass123")
 
-        cls.valid_len_acq_data = 20  # 20 bytes
-        cls.valid_len_asic_data = 124  # 124 bytes
-        cls.valid_len_bee_data = 64  # 64 bytes
+        cls.valid_len_acq_data = 20  # bytes
+        cls.valid_len_asic_data = 124
+        cls.valid_len_bee_data = 64
+        cls.valid_len_obs_data = 5
+        cls.valid_len_liktrg_data = 38
         cls.valid_models = ("H1", "H2", "H3", "H4", "H5", "H6")
 
         cls.valid_length_data = {
@@ -86,6 +88,8 @@ class ConfigurationModelTest(TestCase):
             "asic0": b"x" * cls.valid_len_asic_data,
             "asic1": b"x" * cls.valid_len_asic_data,
             "bee": b"x" * cls.valid_len_bee_data,
+            "obs": b"x" * cls.valid_len_obs_data,
+            "liktrg": b"x" * cls.valid_len_liktrg_data,
         }
 
         cls.valid_config = Configuration.objects.create(
@@ -96,6 +100,8 @@ class ConfigurationModelTest(TestCase):
             asic0=b"x" * cls.valid_len_asic_data,
             asic1=b"x" * cls.valid_len_asic_data,
             bee=b"x" * cls.valid_len_bee_data,
+            obs=b"x" * cls.valid_len_obs_data,
+            liktrg=b"x" * cls.valid_len_liktrg_data,
         )
 
     def test_configuration_creation(self):
@@ -110,6 +116,8 @@ class ConfigurationModelTest(TestCase):
         self.assertEqual(config.asic0, self.valid_length_data["asic0"])
         self.assertEqual(config.asic1, self.valid_length_data["asic1"])
         self.assertEqual(config.bee, self.valid_length_data["bee"])
+        self.assertEqual(config.obs, self.valid_length_data["obs"])
+        self.assertEqual(config.liktrg, self.valid_length_data["liktrg"])
 
     def test_model_choices_validation(self):
         """Test that only valid model choices are accepted"""
@@ -137,6 +145,8 @@ class ConfigurationModelTest(TestCase):
             "asic0": b"x" * 125,  # Too large
             "asic1": b"x" * 123,  # Too small
             "bee": b"x" * 65,  # Too large
+            "obs": b"x" * 37,  # Too large
+            "liktrg": b"x" * 4,  # Too large
         }
         valid_sizes = {k: v for k, v in self.valid_length_data.items()}
 
@@ -175,26 +185,65 @@ class ConfigurationModelTest(TestCase):
         self.assertEqual(self.valid_config.upload_time, test_time)
         self.assertEqual(self.valid_config.deliver_time, test_time)
 
+    def test_configuration_creation_with_partial_data(self):
+        """Test that a configuration can be created with only some config files"""
+        partial_config = Configuration.objects.create(
+            author=self.test_user,
+            model="H1",
+            acq=b"x" * self.valid_len_acq_data,
+            bee=b"x" * self.valid_len_bee_data,
+        )
+        self.assertTrue(isinstance(partial_config, Configuration))
+
+
+    def test_clean_validation_requires_at_least_one_config(self):
+        """Test that at least one configuration file must be provided"""
+        with self.assertRaises(ValidationError):
+            config = Configuration(
+                author=self.test_user,
+                model="H1",
+            )
+            config.full_clean()
 
 class ConfigurationFormTest(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.valid_len_acq_data = 20
+        cls.valid_len_acq_data = 20  # bytes
         cls.valid_len_asic_data = 124
         cls.valid_len_bee_data = 64
+        cls.valid_len_obs_data = 5
+        cls.valid_len_liktrg_data = 38
 
         cls.valid_files = {
-            "acq": SimpleUploadedFile("acq.bin", b"x" * cls.valid_len_acq_data),
-            "acq0": SimpleUploadedFile("acq0.bin", b"x" * cls.valid_len_acq_data),
-            "asic0": SimpleUploadedFile("asic0.bin", b"x" * cls.valid_len_asic_data),
-            "asic1": SimpleUploadedFile("asic1.bin", b"x" * cls.valid_len_asic_data),
-            "bee": SimpleUploadedFile("bee.bin", b"x" * cls.valid_len_bee_data),
+            "acq": SimpleUploadedFile("acq.cfg", b"x" * cls.valid_len_acq_data),
+            "acq0": SimpleUploadedFile("acq0.cfg", b"x" * cls.valid_len_acq_data),
+            "asic0": SimpleUploadedFile("asic0.cfg", b"x" * cls.valid_len_asic_data),
+            "asic1": SimpleUploadedFile("asic1.cfg", b"x" * cls.valid_len_asic_data),
+            "bee": SimpleUploadedFile("bee.cfg", b"x" * cls.valid_len_bee_data),
+            "obs": SimpleUploadedFile("obs.cfg", b"x" * cls.valid_len_obs_data),
+            "liktrg": SimpleUploadedFile("liktrg.par", b"x" * cls.valid_len_liktrg_data),
         }
 
     def test_upload_form_valid_data(self):
         """Test that form accepts valid data"""
         form_data = {"model": "H1"}
         form = UploadConfiguration(data=form_data, files=self.valid_files)
+        self.assertTrue(form.is_valid())
+
+    def test_upload_form_no_files(self):
+        """Test that form rejects submission with no configuration files"""
+        form_data = {"model": "H1"}
+        form = UploadConfiguration(data=form_data, files={})
+        self.assertFalse(form.is_valid())
+
+    def test_upload_form_partial_data(self):
+        """Test that form accepts partial configuration files"""
+        form_data = {"model": "H1"}
+        partial_files = {
+            "acq": self.valid_files["acq"],
+            "bee": self.valid_files["bee"]
+        }
+        form = UploadConfiguration(data=form_data, files=partial_files)
         self.assertTrue(form.is_valid())
 
     def test_upload_form_file_size_validation(self):
@@ -205,23 +254,26 @@ class ConfigurationFormTest(TestCase):
             "asic0": self.valid_len_asic_data + 1,
             "asic1": self.valid_len_asic_data - 1,
             "bee": self.valid_len_bee_data + 1,
+            "obs": self.valid_len_obs_data + 1,
+            "liktrg": self.valid_len_liktrg_data + 1,
         }
 
         for field, size in invalid_sizes.items():
             files = self.valid_files.copy()
             files[field] = SimpleUploadedFile(f"{field}.cfg", b"x" * size)
 
-            form_data = {"model": "1"}
+            form_data = {"model": "H1"}
             form = UploadConfiguration(data=form_data, files=files)
             self.assertFalse(form.is_valid())
             self.assertIn(field, form.errors)
 
     def test_upload_form_model_validation(self):
         """Test model choice validation"""
-        form_data = {"model": "H7"}  # Invalid model
-        form = UploadConfiguration(data=form_data, files=self.valid_files)
-        self.assertFalse(form.is_valid())
-        self.assertIn("model", form.errors)
+        for model in ["H7", "1", "kurdosesso"]:
+            form_data = {"model": model}  # Invalid model
+            form = UploadConfiguration(data=form_data, files=self.valid_files)
+            self.assertFalse(form.is_valid())
+            self.assertIn("model", form.errors)
 
     def test_deliver_form_valid_data(self):
         """Test that delivery form accepts valid data"""
@@ -285,24 +337,30 @@ class ConfigurationViewTest(TestCase):
     def setUpTestData(cls):
         cls.user = User.objects.create_user(username="testuser", password="testpass123")
 
-        cls.valid_len_acq_data = 20
+        cls.valid_len_acq_data = 20  # bytes
         cls.valid_len_asic_data = 124
         cls.valid_len_bee_data = 64
+        cls.valid_len_obs_data = 5
+        cls.valid_len_liktrg_data = 38
 
         cls.files_dummy_valid_length = {
-            "acq": SimpleUploadedFile("acq.bin", b"x" * cls.valid_len_acq_data),
-            "acq0": SimpleUploadedFile("acq0.bin", b"x" * cls.valid_len_acq_data),
-            "asic0": SimpleUploadedFile("asic0.bin", b"x" * cls.valid_len_asic_data),
-            "asic1": SimpleUploadedFile("asic1.bin", b"x" * cls.valid_len_asic_data),
-            "bee": SimpleUploadedFile("bee.bin", b"x" * cls.valid_len_bee_data),
+            "acq": SimpleUploadedFile("acq.cfg", b"x" * cls.valid_len_acq_data),
+            "acq0": SimpleUploadedFile("acq0.cfg", b"x" * cls.valid_len_acq_data),
+            "asic0": SimpleUploadedFile("asic0.cfg", b"x" * cls.valid_len_asic_data),
+            "asic1": SimpleUploadedFile("asic1.cfg", b"x" * cls.valid_len_asic_data),
+            "bee": SimpleUploadedFile("bee.cfg", b"x" * cls.valid_len_bee_data),
+            "obs": SimpleUploadedFile("obs.cfg", b"x" * cls.valid_len_obs_data),
+            "liktrg": SimpleUploadedFile("liktrg.par", b"x" * cls.valid_len_liktrg_data),
         }
 
         cls.files_dummy_wrong_length = {
-            "acq": SimpleUploadedFile("acq.bin", b"x" * (cls.valid_len_acq_data + 1)),
-            "acq0": SimpleUploadedFile("acq0.bin", b"x" * (cls.valid_len_acq_data - 1)),
-            "asic0": SimpleUploadedFile("asic0.bin", b"x" * (cls.valid_len_asic_data + 1)),
-            "asic1": SimpleUploadedFile("asic1.bin", b"x" * (cls.valid_len_asic_data - 1)),
-            "bee": SimpleUploadedFile("bee.bin", b"x" * (cls.valid_len_bee_data + 1)),
+            "acq": SimpleUploadedFile("acq.cfg", b"x" * (cls.valid_len_acq_data + 1)),
+            "acq0": SimpleUploadedFile("acq0.cfg", b"x" * (cls.valid_len_acq_data - 1)),
+            "asic0": SimpleUploadedFile("asic0.cfg", b"x" * (cls.valid_len_asic_data + 1)),
+            "asic1": SimpleUploadedFile("asic1.cfg", b"x" * (cls.valid_len_asic_data - 1)),
+            "bee": SimpleUploadedFile("bee.cfg", b"x" * (cls.valid_len_bee_data + 1)),
+            "obs": SimpleUploadedFile("obs.cfg", b"x" * (cls.valid_len_obs_data + 1)),
+            "liktrg": SimpleUploadedFile("liktrg.par", b"x" * (cls.valid_len_liktrg_data + 1)),
         }
 
         cls.files_fm6 = {
@@ -326,6 +384,14 @@ class ConfigurationViewTest(TestCase):
                 name="bee.cfg",
                 content=f2c(BASE_DIR / "configs/tests/configs_fm6/BEE_FM6.cfg"),
             ),
+            "obs": SimpleUploadedFile(
+                name="obs.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/obs.cfg"),
+            ),
+            "liktrg": SimpleUploadedFile(
+                name="liktrg.par",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/liktrg.par"),
+            ),
         }
 
         cls.files_fm2 = {
@@ -348,6 +414,14 @@ class ConfigurationViewTest(TestCase):
             "bee": SimpleUploadedFile(
                 name="bee.cfg",
                 content=f2c(BASE_DIR / "configs/tests/configs_fm2/BEE_FM2.cfg"),
+            ),
+            "obs": SimpleUploadedFile(
+                name="obs.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm2/obs.cfg"),
+            ),
+            "liktrg": SimpleUploadedFile(
+                name="liktrg.par",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm2/liktrg.par"),
             ),
         }
 
@@ -395,6 +469,14 @@ class ConfigurationViewTest(TestCase):
                 name="bee.cfg",
                 content=f2c(BASE_DIR / "configs/tests/configs_fm6/BEE_FM6.cfg"),
             ),
+            "obs": SimpleUploadedFile(
+                name="obs.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/obs.cfg"),
+            ),
+            "liktrg": SimpleUploadedFile(
+                name="liktrg.par",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/liktrg.par"),
+            ),
         }
 
         cls.files_wrong_asic0 = {
@@ -417,6 +499,14 @@ class ConfigurationViewTest(TestCase):
             "bee": SimpleUploadedFile(
                 name="bee.cfg",
                 content=f2c(BASE_DIR / "configs/tests/configs_fm2/BEE_FM2.cfg"),
+            ),
+            "obs": SimpleUploadedFile(
+                name="obs.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm2/obs.cfg"),
+            ),
+            "liktrg": SimpleUploadedFile(
+                name="liktrg.par",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm2/liktrg.par"),
             ),
         }
 
@@ -467,6 +557,41 @@ class ConfigurationViewTest(TestCase):
         self.assertIn("config_model", self.client.session)
         self.assertIn("config_data", self.client.session)
         self.assertIn("config_hash", self.client.session)
+
+    def test_upload_view_post_single_file_success(self):
+        """Test successful file upload"""
+        for ftype in ["acq", "acq0", "asic0", "asic1", "bee", "obs", "liktrg"]:
+            response = self.login_and_upload_fileset("H6", {ftype: self.files_fm6[ftype]})
+            self.assertRedirects(response, reverse("configs:test"))
+
+            self.assertIn("config_model", self.client.session)
+            self.assertIn("config_data", self.client.session)
+            self.assertIn("config_hash", self.client.session)
+
+    def test_upload_view_post_permutation_file_success(self):
+        """Testing all remaining combinations of uploads. Kinda slow."""
+        from itertools import combinations
+
+        file_contents = {
+            ftype: self.files_fm6[ftype].read()
+            for ftype in self.files_fm6
+        }
+
+        ftypes = ["acq", "acq0", "asic0", "asic1", "bee", "obs", "liktrg"]
+        combs = list([s for r in range(2, 7) for s in combinations(ftypes, r)])
+        for comb in combs:
+            files = {
+                ftype: SimpleUploadedFile(
+                    f"{ftype}.cfg",
+                    file_contents[ftype]
+                ) for ftype in comb
+            }
+            response = self.login_and_upload_fileset("H6", files)
+            self.assertRedirects(response, reverse("configs:test"))
+
+            self.assertIn("config_model", self.client.session)
+            self.assertIn("config_data", self.client.session)
+            self.assertIn("config_hash", self.client.session)
 
     def test_upload_view_post_error(self):
         """Test not going further when uploading files with wrong size"""
@@ -576,8 +701,8 @@ class ConfigurationViewTest(TestCase):
         self.assertNotIn("config_data", self.client.session)
         self.assertNotIn("config_hash", self.client.session)
 
-    def test_session_timeout(self):
-        """Test handling of session timeout"""
+    def test_session_expires_at_logout(self):
+        """Test handling of session at logout"""
         _ = self.login_and_upload_fileset("6", self.files_fm6)
 
         self.client.session.flush()
@@ -613,21 +738,17 @@ class ConfigurationViewTest(TestCase):
         """Test proper navigation flow enforcement"""
         self.login()
 
+        # redirection to upload if no data was uploaded
         response = self.client.get(reverse("configs:test"))
         self.assertRedirects(response, reverse("configs:upload"))
 
         response = self.client.get(reverse("configs:deliver"))
         self.assertRedirects(response, reverse("configs:upload"))
 
+        # uploads good data, then check test and deliver are accessible
         _ = self.login_and_upload_fileset("H6", self.files_fm6)
         response = self.client.get(reverse("configs:test"))
         self.assertEqual(response.status_code, 200)
-
-        session = self.client.session
-        session["can_proceed"] = True
-        session.save()
-
-        # Can access deliver
         response = self.client.get(reverse("configs:deliver"))
         self.assertEqual(response.status_code, 200)
 
@@ -649,7 +770,7 @@ class ConfigurationViewTest(TestCase):
         self.login_and_upload_fileset("H6", self.files_fm6)
 
         session_data = self.client.session["config_data"]
-        self.assertEqual(tuple(session_data.keys()), ("acq", "acq0", "asic0", "asic1", "bee"))
+        self.assertEqual(tuple(session_data.keys()), CONFIG_TYPES)
 
 
 class ConfigurationEmailTest(TestCase):
@@ -811,3 +932,35 @@ class ConfigurationEmailTest(TestCase):
             original_file = self.files_fm6[file_type]
             original_file.seek(0)
             self.assertEqual(getattr(config, file_type), original_file.read())
+
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_partial_config_delivery(self):
+        """Test delivery of partial configuration files"""
+        partial_files = {
+            "acq": self.files_fm6["acq"],
+            "bee": self.files_fm6["bee"]
+        }
+        self.client.post(reverse("configs:upload"),
+                         data={"model": "H6", **partial_files},
+                         follow=True)
+        self.client.get(reverse("configs:test"))
+
+        form_data = {
+            "recipient": settings.EMAIL_CONFIGS_RECIPIENT,
+            "subject": "Test Partial Configuration",
+        }
+        response = self.client.post(reverse("configs:deliver"), data=form_data)
+
+        # email attachment contains only uploaded files
+        email = mail.outbox[0]
+        with zipfile.ZipFile(BytesIO(email.attachments[0][1])) as zf:
+            filenames = set(fn for fn in zf.namelist() if not fn.startswith("readme"))
+            self.assertEqual(filenames, {"acq.cfg", "bee.cfg"})
+
+        # check database record
+        config = Configuration.objects.last()
+        self.assertIsNotNone(getattr(config, "acq"))
+        self.assertIsNotNone(getattr(config, "bee"))
+        self.assertIsNone(getattr(config, "acq0"))
+        self.assertIsNone(getattr(config, "asic0"))
+        self.assertIsNone(getattr(config, "asic1"))
