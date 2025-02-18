@@ -65,6 +65,7 @@ from .forms import DeliverConfiguration
 from .forms import UploadConfiguration
 from .models import config_to_archive
 from .models import Configuration
+from .validators import Status
 
 User = get_user_model()
 
@@ -489,8 +490,6 @@ class ConfigurationViewTest(TestCase):
         self.assertTemplateUsed(response, "configs/test.html")
 
         self.assertIn("results", response.context)
-        self.assertIn("contents", response.context)
-        self.assertIn("can_proceed", response.context)
 
     def test_test_session_data_persistence(self):
         """Test that session data persists correctly through the workflow"""
@@ -510,18 +509,16 @@ class ConfigurationViewTest(TestCase):
         self.login_and_upload_fileset("H6", self.files_fm6)
 
         response = self.client.get(reverse("configs:test"))
-        results = response.context["results"]
-        self.assertFalse(any(test["status"] == "WARNING" for file_tests in results.values() for test in file_tests))
-        self.assertFalse(any(test["status"] == "ERROR" for file_tests in results.values() for test in file_tests))
+        test_result = self.client.session["test_status"]
+        self.assertTrue(test_result == Status.PASSED)
 
     def test_test_view_pass_matching_data_fm2(self):
         """Test test view does not report warning and error for a well-formed configuration"""
         self.login_and_upload_fileset("H2", self.files_fm2)
 
         response = self.client.get(reverse("configs:test"))
-        results = response.context["results"]
-        self.assertFalse(any(test["status"] == "WARNING" for file_tests in results.values() for test in file_tests))
-        self.assertFalse(any(test["status"] == "ERROR" for file_tests in results.values() for test in file_tests))
+        test_result = self.client.session["test_status"]
+        self.assertTrue(test_result == Status.PASSED)
 
     def test_test_view_warns_mismatched_data(self):
         """Test test view reports on mismatch asic1"""
@@ -530,9 +527,8 @@ class ConfigurationViewTest(TestCase):
 
         self.login_and_upload_fileset("H6", files_mixed_up)
         response = self.client.get(reverse("configs:test"))
-        results = response.context["results"]
-
-        self.assertTrue(any(test["status"] == "WARNING" for file_tests in results.values() for test in file_tests))
+        test_result = self.client.session["test_status"]
+        self.assertTrue(test_result == Status.WARNING)
 
     def test_test_view_warns_wrong_asic1_data(self):
         """Test test view reports on asic0 given in place of asic1"""
@@ -540,9 +536,8 @@ class ConfigurationViewTest(TestCase):
         # file will consume it and i want to read the same file twice.
         self.login_and_upload_fileset("H6", self.files_wrong_asic1)
         response = self.client.get(reverse("configs:test"))
-        results = response.context["results"]
-
-        self.assertTrue(any(test["status"] == "WARNING" for file_tests in results.values() for test in file_tests))
+        test_result = self.client.session["test_status"]
+        self.assertTrue(test_result == Status.WARNING)
 
     def test_test_view_warns_wrong_asic0_data(self):
         """Test test view reports on asic1 given in place of asic0"""
@@ -550,9 +545,8 @@ class ConfigurationViewTest(TestCase):
         # file will consume it and i want to read the same file twice.
         self.login_and_upload_fileset("H2", self.files_wrong_asic0)
         response = self.client.get(reverse("configs:test"))
-        results = response.context["results"]
-
-        self.assertTrue(any(test["status"] == "WARNING" for file_tests in results.values() for test in file_tests))
+        test_result = self.client.session["test_status"]
+        self.assertTrue(test_result == Status.WARNING)
 
     def test_deliver_view_without_session(self):
         """Test deliver view input validation"""
@@ -581,18 +575,6 @@ class ConfigurationViewTest(TestCase):
         self.assertNotIn("config_model", self.client.session)
         self.assertNotIn("config_data", self.client.session)
         self.assertNotIn("config_hash", self.client.session)
-
-    def test_file_content_preservation(self):
-        """Test that file content is preserved throughout the process"""
-        _ = self.login_and_upload_fileset("H6", self.files_fm6)
-
-        response = self.client.get(reverse("configs:test"))
-        contents = response.context["contents"]
-
-        for field, original_file in self.files_fm6.items():
-            original_file.seek(0)
-            original_content = original_file.read().hex()
-            self.assertEqual(contents[field], original_content)
 
     def test_session_timeout(self):
         """Test handling of session timeout"""
@@ -709,7 +691,7 @@ class ConfigurationEmailTest(TestCase):
     def prepare_delivery_session(self):
         """Helper to setup a valid delivery session"""
         response = self.client.post(reverse("configs:upload"), data={"model": "H6", **self.files_fm6}, follow=True)
-        self.client.get(reverse("configs:test"))
+        response = self.client.get(reverse("configs:test"))
         return response
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
@@ -779,6 +761,7 @@ class ConfigurationEmailTest(TestCase):
             self.assertIn("config_model", self.client.session)
             self.assertIn("config_data", self.client.session)
             self.assertIn("config_hash", self.client.session)
+            self.assertIn("test_status", self.client.session)
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_attachment_content_verification(self):
@@ -790,7 +773,7 @@ class ConfigurationEmailTest(TestCase):
             "subject": "Test Configuration Delivery",
         }
 
-        self.client.post(reverse("configs:deliver"), data=form_data)
+        response = self.client.post(reverse("configs:deliver"), data=form_data)
         email = mail.outbox[0]
         self.assertEqual(len(email.attachments), 1)
         with zipfile.ZipFile(BytesIO(email.attachments[0][1])) as zf:

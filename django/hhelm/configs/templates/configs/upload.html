@@ -1,31 +1,64 @@
 {% extends 'base.html' %}
 {% block content %}
-{% include "navbar.html" %}
 
-<h2>New Configuration</h2>
+<h1 class="font-bold text-4xl mb-6">New Configuration</h1>
 
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     
     {{ form.non_field_errors }}
     
-    <div>
-        <label for="{{ form.model.id_for_label }}">Satellite Model:</label>
-        {{ form.model }}
-        {{ form.model.errors }}
+    <div class="my-6">
+        <label class="block font-medium my-6 text-2xl">Spacecraft Model:</label>
+        <div class="flex gap-4">
+          {% for value, text in form.model.field.choices %}
+            <label class="flex items-center cursor-pointer group">
+              <input type="radio" 
+                     name="{{ form.model.name }}" 
+                     value="{{ value }}" 
+                     {% if form.model.value|stringformat:"s" == value|stringformat:"s" %}checked{% endif %}
+                     class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-600 focus:ring-2"
+              >
+              <span class="ml-2 group-hover:text-gray-300">{{ text }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% if form.model.errors %}
+          <div class="text-red-500 text-sm mt-1">{{ form.model.errors }}</div>
+        {% endif %}
     </div>
 
-    {% for field in form %}
-        {% if field.name != 'model' %}
-        <div>
-            <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
-            {{ field }}
-            <div class="field-error">{{ field.errors }}</div>
-        </div>
-        {% endif %}
-    {% endfor %}
+    <label class="block font-medium my-6 text-2xl">Configuration files:</label>
+    <div class="grid grid-cols-2 gap-4">
+        {% for field in form %}
+            {% if field.name != 'model' %}
+            <div class="bg-gray-900 p-4 rounded">
+                <label for="{{ field.id_for_label }}" class="block text-sm text-gray-400 mb-2 uppercase font-bold">
+                    {{ field.label }}
+                </label>
+                <div class="relative">
+                    <input type="file" id="{{ field.id_for_label }}" name="{{ field.name }}" 
+                        class="block w-full text-sm text-gray-400 px-1
+                                file:mr-4 file:py-2
+                                file:rounded file:border-0 
+                                file:text-sm file:font-medium
+                                file:bg-gray-800 file:text-white
+                                hover:file:bg-gray-700
+                                cursor-pointer"/>
+                </div>
+                {% if field.errors %}
+                    <div class="text-red-500 text-sm mt-2">{{ field.errors }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
 
-    <button type="submit">Next</button>
+    <div class="flex justify-end mt-6">
+        <button type="submit" class="text-4xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
+            <i class="bi bi-arrow-right"></i>
+        </button>
+    </div>
 </form>
 
 {% endblock %}

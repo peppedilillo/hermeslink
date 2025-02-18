@@ -18,10 +18,11 @@ from hermes import SPACECRAFTS_NAMES
 
 from . import forms
 from . import models
-from . import validators
+from .validators import TestResult, Status, validate_configurations
 from .models import config_to_archive
 from .models import config_to_sha256
 from .models import Configuration
+from .reports import format_report_to_html
 
 
 def encode_config_data(config_data: OrderedDict[str, bytes]) -> dict[str, str]:
@@ -88,6 +89,12 @@ def session_is_valid(request: HttpRequest) -> bool:
     return False
 
 
+
+def serialize(tr: TestResult):
+    # since we are going to display results in a template, we need them to be serializable
+    return {"status": tr.status.name, "message": tr.message}
+
+
 @login_required
 def test(request: HttpRequest) -> HttpResponse:
     """
@@ -99,20 +106,25 @@ def test(request: HttpRequest) -> HttpResponse:
         return redirect("configs:upload")
 
     # we sanity check the configuration file content
-    results, can_proceed = validators.validate_configurations(
+    results = validate_configurations(
         decode_config_data(request.session["config_data"]),
         request.session["config_model"],
     )
-    request.session["can_proceed"] = can_proceed
 
+    test_status = Status.PASSED
+    for result in [r for k, v in results.items() for r in v]:
+        if result.status == Status.ERROR:
+            test_status = Status.ERROR
+            break
+        elif result.status == Status.WARNING:
+            test_status = Status.WARNING
+
+    request.session["test_status"] = test_status
     return render(
         request,
         "configs/test.html",
         {
-            "results": results,
-            # contents is for displaying, we just spit out the hex encoded file content
-            "contents": request.session["config_data"],
-            "can_proceed": can_proceed,
+            "results": format_report_to_html(results, request.session["config_data"]),
         },
     )
 
@@ -174,13 +186,18 @@ def deliver(request: HttpRequest) -> HttpResponse:
 
     def cleanup():
         """Cleans up session data."""
-        for key in ["config_model", "config_data", "config_hash", "can_proceed"]:
-            request.session.pop(key, None)  # Safely remove keys
+        for key in [
+            "config_data",
+            "config_hash",
+            "config_model",
+            "test_status"
+        ]:
+            request.session.pop(key, None)
 
-    if not session_is_valid(request) or "can_proceed" not in request.session:
+    if not session_is_valid(request) or "test_status" not in request.session:
         return redirect("configs:upload")
 
-    if not request.session["can_proceed"]:
+    if request.session["test_status"] == Status.ERROR:
         return redirect("configs:test")
 
     if request.method == "POST":
@@ -192,6 +209,8 @@ def deliver(request: HttpRequest) -> HttpResponse:
                     send_email(config)
                     commit_configuration(config)
                     cleanup()
+
+                    print("hello", request.session.keys())
             except HashError as e:
                 print(f"Integrity error: {str(e)}")
                 return render(request, "configs/deliver_error.html", {"error": "Compromised input integrity."})

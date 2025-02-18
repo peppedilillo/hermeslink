@@ -181,3 +181,4 @@ cython_debug/
 .DS_Store
 django/dev/
 **/repomix-output.txt
+**/tailwind*

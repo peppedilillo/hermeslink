@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Literal
+from typing import Literal
 
 import hermes
 from hermes.configs import bytest_to_bitdict_asic
@@ -8,7 +8,7 @@ from hermes.configs import parse_bitdict_asic
 from hermes.payloads import UNBOND
 
 
-class Status(Enum):
+class Status(int, Enum):
     PASSED = 0
     WARNING = 1
     ERROR = 2
@@ -112,7 +112,7 @@ def serialize(tr: TestResult):
 def validate_configurations(
     bytesdict: dict[str, bytes],
     model: Literal[*hermes.SPACECRAFTS_NAMES],
-) -> tuple[Dict[str, List[tuple[str, str]]], bool]:
+) -> dict[str, list[TestResult]]:
     """
     Validates a configuration and returns test results and a boolean pass.
     """
@@ -138,5 +138,5 @@ def validate_configurations(
             test_bee_size(bytesdict["bee"]),
         ],
     }
-    can_proceed = not any([r.status == Status.ERROR for k, v in test_results.items() for r in v])
-    return {k: [*map(serialize, v)] for k, v in test_results.items()}, can_proceed
+    return test_results
+

@@ -1,28 +1,29 @@
 {% extends 'base.html' %}
+{% load configs_extras %}
 {% block content %}
-{% include "navbar.html" %}
-<h2>Submit Configuration</h2>
-
-<form method="post">
+<h2 class="font-bold text-4xl pb-6">Submit Configuration</h2>
+<form method="post" class="w-100">
     {% csrf_token %}
-    {{ form.non_field_errors }}
-    
-    {% for field in form %}
-    <div>
-        <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
-        {{ field }}
-        {% if field.help_text %}
-            <small>{{ field.help_text }}</small>
-        {% endif %}
-        {% if field.errors %}
-            <ul>
-                {% for error in field.errors %}
-                    <li>{{ error }}</li>
-                {% endfor %}
-            </ul>
-        {% endif %}
+    <div class="space-y-2">
+        <div class="flex">
+            <div class="w-24 pr-4">{{ form.recipient.label_tag }}</div>
+            <div class="flex-1 max-w-[28rem]">{{ form.recipient | addclass:"w-full bg-black text-white p-1 border border-white"}}</div>
+        </div>
+        <div class="flex">
+            <div class="w-24 pr-4">{{ form.subject.label_tag }}</div>
+            <div class="flex-1 max-w-[28rem]">{{ form.subject | addclass:"w-full bg-black text-white p-1 border border-white"}}</div>
+        </div>
+        <div class="flex">
+            <div class="w-24 pr-4">{{ form.cc.label_tag }}</div>
+            <div class="flex-1 max-w-[28rem]">{{ form.cc | addclass:"w-full bg-black text-white p-1 border border-white"}}</div>
+        </div>
     </div>
-    {% endfor %}
-    <button type="submit">Submit</button>
+
+    <div class="flex justify-end pt-6">
+        <button type="submit" class="text-4xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
+            <i class="bi bi-send"></i>
+        </button>
+    </div>
 </form>
+
 {% endblock %}

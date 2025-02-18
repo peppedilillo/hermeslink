@@ -1,33 +1,30 @@
 {% extends 'base.html' %}
 {% block content %}
-{% include "navbar.html" %}
 
-<h2>Upload overview</h2>
-{% for file, content in contents.items %}
-    <h3>{{ file }}</h3>
-    <div style="word-wrap: break-word; max-width: 80ch;">0x{{ content }}</div>
-{% endfor %}
+<h1 class="font-bold text-4xl mb-6">Configuration test</h1>
+    <div class="mb-6">
+    {% if can_proceed %}
+        You can proceed submitting this configuration.<br>
+        Please check the test report for possible warnings.
+    {% else %}
+        You configuration contains errors and cannot be submitted.
+    {% endif %}
+    </div>
     
-<h2>Test Results</h2>
-{% for file, tests in results.items %}
-    <h3>{{ file }}</h3>
-    <p> {{ contents.file }} </p>
-    {% for test in tests %}
-        <ul>
-            <li>test {{ test.status }}: {{ test.message }}</li>
-        </ul>
-    {% endfor %}
-{% endfor %}
+<h1 class="font-bold text-2xl mb-6">Test report:</h1>
+    <div class="text-mono text-sm p-4 bg-gray-900"><pre>{{ results | safe }}</pre></div>
     
-{% if can_proceed %}
-    <form method="post" action="{% url 'configs:deliver' %}">
-        {% csrf_token %}
-        <button type="submit">Next</button>
-    </form>
-{% else %}
-    <form method="get" action="{% url 'configs:upload' %}">
-        <button type="submit">Go back to upload</button>
-    </form>
-{% endif %}
-    
+    {% if request.session.test_status != 2 %}
+        <div class="flex justify-end mt-6">
+            <a href="{% url 'configs:deliver' %}" class="text-4xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
+                <i class="bi bi-arrow-right"></i>
+            </button>
+        </div>
+    {% else %}
+        <div class="flex justify-end mt-6">
+            <a href="{% url 'configs:upload' %}" class="text-4xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+        </div>
+    {%  endif %}
 {% endblock %}

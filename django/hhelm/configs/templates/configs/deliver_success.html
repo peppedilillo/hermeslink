@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-{% include "navbar.html" %}
-<h2>Configuration delivered!</h2>
+<h2 class="font-bold text-4xl mb-6">Configuration delivered!</h2>
 <form method="get" action="{% url 'main:index' %}">
     <button type="submit">Back to homepage</button>
 </form>
