@@ -1,42 +1,64 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<h1 class="font-bold text-4xl mb-6">History</h1>
+<h1 class="font-bold text-4xl mb-8">Configuration History</h1>
 
-    {% if page_obj %}
+{% if page_obj %}
+    <div class="space-y-6">
         {% for config in page_obj %}
-            <div class="config-entry">
-                <p>
-                    author: {{ config.author.username }}<br>
-                    date: {{ config.date }}<br>
-                    delivered: {{ config.deliver_time }}<br>
-                    uploaded: {{ config.upload_time }}<br>
-                    download:
-                    <a href="{% url 'configs:download_config' config.id 'zip' %}">ZIP</a> |
-                    <a href="{% url 'configs:download_config' config.id 'tar' %}">TAR</a>
-                </p>
+            <div class="config-entry bg-gray-900 p-4 rounded">
+                <div class="grid grid-cols-12 gap-4">
+                    <!-- ID and Model columns take less space -->
+                    <div class="col-span-1">
+                        <span class="text-gray-400 text-sm">ID</span>
+                        <p class="font-medium">{{ config.pk }}</p>
+                    </div>
+                    <div class="col-span-1">
+                        <span class="text-gray-400 text-sm">Model</span>
+                        <p>{{ config.model }}</p>
+                    </div>
+                    <div class="col-span-3">
+                        <span class="text-gray-400 text-sm">Author</span>
+                        <p class="font-medium">{{ config.author.username|truncatechars:20 }}</p>
+                    </div>
+                    <div class="col-span-3">
+                        <span class="text-gray-400 text-sm">Submitted</span>
+                        <p>{{ config.deliver_time|date:"Y-m-d H:i"|default:"Not delivered" }}</p>
+                    </div>
+                    <div class="col-span-4">
+                        <span class="text-gray-400 text-sm">Uploaded</span>
+                        <p>{{ config.upload_time|date:"Y-m-d H:i"|default:"Not uploaded" }}</p>
+                    </div>
+                </div>
+                <div class="mt-3 pt-3 border-t border-gray-700 flex justify-end">
+                    <a href="{% url 'configs:download_config' config.id 'zip' %}" class="mr-3 text-sm text-blue-400 hover:text-blue-300">Download ZIP</a>
+                    <a href="{% url 'configs:download_config' config.id 'tar' %}" class="text-sm text-blue-400 hover:text-blue-300">Download TAR</a>
+                </div>
             </div>
         {% endfor %}
 
-        <div class="pagination">
-            <span class="step-links">
+        {% if page_obj.paginator.num_pages > 1 %}
+            <div class="pagination flex justify-center items-center space-x-2 mt-8">
                 {% if page_obj.has_previous %}
-                    <a href="?page=1">&laquo; first</a>
-                    <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+                    <a href="?page=1" class="px-3 py-1 rounded bg-gray-800 hover:bg-gray-700">&laquo; first</a>
+                    <a href="?page={{ page_obj.previous_page_number }}" class="px-3 py-1 rounded bg-gray-800 hover:bg-gray-700">previous</a>
                 {% endif %}
 
-                <span class="current">
-                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+                <span class="px-3 py-1">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
                 </span>
 
                 {% if page_obj.has_next %}
-                    <a href="?page={{ page_obj.next_page_number }}">next</a>
-                    <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+                    <a href="?page={{ page_obj.next_page_number }}" class="px-3 py-1 rounded bg-gray-800 hover:bg-gray-700">next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}" class="px-3 py-1 rounded bg-gray-800 hover:bg-gray-700">last &raquo;</a>
                 {% endif %}
-            </span>
-        </div>
-    {% else %}
-        <p>{{ empty_message }}</p>
-    {% endif %}
+            </div>
+        {% endif %}
+    </div>
+{% else %}
+    <div class="bg-gray-900 p-6 rounded text-center">
+        <p class="text-gray-400">{{ empty_message }}</p>
+    </div>
+{% endif %}
 
 {% endblock %}
