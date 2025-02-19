@@ -77,7 +77,6 @@ from hhelm.settings import BASE_DIR
 
 from .forms import DeliverConfiguration
 from .forms import UploadConfiguration
-from .models import config_to_archive
 from .models import Configuration
 from .validators import Status
 

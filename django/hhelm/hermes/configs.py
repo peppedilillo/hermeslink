@@ -1,16 +1,37 @@
+from dataclasses import dataclass
 from functools import reduce
 
 
-CONFIG_TYPES = tuple(sorted(("acq", "acq0", "asic0", "asic1", "bee", "liktrg", "obs")))
+@dataclass
+class FileName:
+    NAME: str
+    SUFFIX: str
+
+    def __str__(self) -> str:
+        return f"{self.NAME}.{self.SUFFIX}"
+
+
+CONFIG_TYPES = tuple(sorted(("acq", "acq0", "asic0", "asic1", "bee", "liktrg", "obs",)))
 CONFIG_SIZE = {
     "acq": 20,
     "acq0": 20,
     "asic0": 124,
     "asic1": 124,
     "bee": 64,
-    "obs": 5,
     "liktrg": 38,
+    "obs": 5,
 }
+_STANDARD_FILENAMES = {
+    "acq": FileName("acq", "cfg"),
+    "acq0": FileName("acq0", "cfg"),
+    "asic0": FileName("asic0", "cfg"),
+    "asic1": FileName("asic1", "cfg"),
+    "bee": FileName("bee", "cfg"),
+    "liktrg": FileName("liktrg", "par"),
+    "obs": FileName("obs", "cfg"),
+}
+STANDARD_FILENAMES = {k: str(v) for k, v in _STANDARD_FILENAMES.items()}
+STANDARD_SUFFIXES = tuple({f.SUFFIX for f in _STANDARD_FILENAMES.values()})
 
 
 def bytest_to_bitdict_asic(bstr: bytes) -> dict[str, str]:

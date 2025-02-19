@@ -1,5 +1,7 @@
 from .configs import CONFIG_SIZE
 from .configs import CONFIG_TYPES
+from .configs import STANDARD_FILENAMES
+from .configs import STANDARD_SUFFIXES
 from .payloads import _maps
 from .payloads import UNBOND
 

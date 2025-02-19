@@ -32,14 +32,14 @@
     <div class="grid grid-cols-2 gap-4">
         {% for field in form %}
             {% if field.name != 'model' %}
-            <div class="bg-gray-900 p-4 rounded">
-                <label for="{{ field.id_for_label }}" class="block text-sm text-gray-400 mb-2 uppercase font-bold">
+            <div class="bg-gray-900 p-1 rounded">
+                <label for="{{ field.id_for_label }}" class="block text-sm text-gray-400 mb-2 px-2 uppercase font-bold">
                     {{ field.label }}
                 </label>
                 <div class="relative">
                     <input type="file" id="{{ field.id_for_label }}" name="{{ field.name }}" 
-                        class="block w-full text-sm text-gray-400 px-1
-                                file:mr-4 file:py-2
+                        class="block w-full text-sm text-gray-400 px-1 py-1
+                                file:mr-4 file:p-2 file:px-6
                                 file:rounded file:border-0 
                                 file:text-sm file:font-medium
                                 file:bg-gray-800 file:text-white

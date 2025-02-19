@@ -13,18 +13,24 @@ from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.utils import timezone
+
+import configs.downloads
 from hermes import CONFIG_TYPES
 from hermes import SPACECRAFTS_NAMES
 
 from . import forms
 from . import models
-from .validators import TestResult, Status, validate_configurations
-from .models import config_to_archive
+from .validators import Status, validate_configurations
+from .downloads import write_archive
 from .models import config_to_sha256
 from .models import Configuration
-from .reports import format_report_to_html
+from .reports import write_test_report_html
 
 
+
+# in this module we will deal with OrderedDict for bookkeeping the configuration file data.
+# this choice is driven by the need of an unambiguous order to keep track of the sha256, which we
+# computed on the concatenated files.
 def encode_config_data(config_data: OrderedDict[str, bytes]) -> dict[str, str]:
     """Encodes binary configuration data for session storage using hex"""
     return OrderedDict((ftype, content.hex()) for ftype, content in config_data.items())
@@ -119,7 +125,7 @@ def test(request: HttpRequest) -> HttpResponse:
         request,
         "configs/test.html",
         {
-            "results": format_report_to_html(results, request.session["config_data"]),
+            "results": write_test_report_html(results, request.session["config_data"]),
         },
     )
 
@@ -146,8 +152,8 @@ def deliver(request: HttpRequest) -> HttpResponse:
             cc=form.cleaned_data["cc"],
             to=(form.cleaned_data["recipient"],),
         )
-        archive_content = config_to_archive(config_entry, "zip")
-        email.attach("hermes_cfg.zip", archive_content, "application/zip")
+        archive_content = write_archive(config_entry, "zip")
+        email.attach(f"{config_entry.filestring()}.zip", archive_content, "application/zip")
         email.send()
 
     def create_and_check_configuration():
@@ -201,8 +207,8 @@ def deliver(request: HttpRequest) -> HttpResponse:
             try:
                 with transaction.atomic():
                     config = create_and_check_configuration()
-                    send_email(config)
                     commit_configuration(config)
+                    send_email(config)
                     cleanup()
 
             except HashError as e:
@@ -256,8 +262,8 @@ def download_config(request, config_id: int, format: Literal["zip", "tar"] = "zi
     except Configuration.DoesNotExist:
         return HttpResponse("404: Configuration not found", status=404)
 
-    archive_content = models.config_to_archive(config, format)
-    filename = f"hermes_cfg_{config_id}.{'tar.gz' if format == 'tar' else 'zip'}"
+    archive_content = configs.downloads.write_archive(config, format)
+    filename = f"{config.filestring()}.{'tar.gz' if format == 'tar' else 'zip'}"
 
     response = HttpResponse(archive_content)
     response["Content-Type"] = "application/zip" if format == "zip" else "application/x-tar"

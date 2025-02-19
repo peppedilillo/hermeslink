@@ -1,17 +1,13 @@
 from hashlib import sha256
-import io
-import tarfile
 from typing import Iterable, Literal
-import zipfile
 
 from django.core.validators import MinLengthValidator, ValidationError
 from django.db import models
-from hermes import CONFIG_TYPES
+
+from hermes import CONFIG_TYPES, CONFIG_SIZE
 from hermes import SPACECRAFTS_NAMES
 from hhelm.settings import AUTH_USER_MODEL
-
 from .validators import crc16
-
 
 CustomUser = AUTH_USER_MODEL
 
@@ -33,13 +29,13 @@ class Configuration(models.Model):
     uploaded = models.BooleanField(default=False)
     upload_time = models.DateTimeField(null=True, blank=True)
     model = models.CharField(max_length=2, choices=MODELS)
-    acq0 = models.BinaryField(max_length=20, null=True, blank=True, validators=[MinLengthValidator(20)])
-    acq = models.BinaryField(max_length=20, null=True, blank=True, validators=[MinLengthValidator(20)])
-    asic0 = models.BinaryField(max_length=124, null=True, blank=True, validators=[MinLengthValidator(124)])
-    asic1 = models.BinaryField(max_length=124, null=True, blank=True, validators=[MinLengthValidator(124)])
-    bee = models.BinaryField(max_length=64, null=True, blank=True, validators=[MinLengthValidator(64)])
-    liktrg = models.BinaryField(max_length=38, null=True, blank=True, validators=[MinLengthValidator(38)])
-    obs = models.BinaryField(max_length=5, null=True, blank=True, validators=[MinLengthValidator(5)])
+    acq0 = models.BinaryField(max_length=CONFIG_SIZE["acq0"], null=True, blank=True, validators=[MinLengthValidator(CONFIG_SIZE["acq0"])])
+    acq = models.BinaryField(max_length=CONFIG_SIZE["acq"], null=True, blank=True, validators=[MinLengthValidator(CONFIG_SIZE["acq"])])
+    asic0 = models.BinaryField(max_length=CONFIG_SIZE["asic0"], null=True, blank=True, validators=[MinLengthValidator(CONFIG_SIZE["asic0"])])
+    asic1 = models.BinaryField(max_length=CONFIG_SIZE["asic1"], null=True, blank=True, validators=[MinLengthValidator(CONFIG_SIZE["asic1"])])
+    bee = models.BinaryField(max_length=CONFIG_SIZE["bee"], null=True, blank=True, validators=[MinLengthValidator(CONFIG_SIZE["bee"])])
+    liktrg = models.BinaryField(max_length=CONFIG_SIZE["liktrg"], null=True, blank=True, validators=[MinLengthValidator(CONFIG_SIZE["liktrg"])])
+    obs = models.BinaryField(max_length=CONFIG_SIZE["obs"], null=True, blank=True, validators=[MinLengthValidator(CONFIG_SIZE["obs"])])
 
     def clean(self):
         """Validate that at least one configuration file is provided"""
@@ -54,9 +50,15 @@ class Configuration(models.Model):
         """Returns a list of configuration types that have content."""
         return [ftype for ftype in CONFIG_TYPES if getattr(self, ftype) is not None]
 
-    def get_config_files(self) -> dict[str, bytes]:
+    def get_config_data(self) -> dict[str, bytes]:
         """Returns a dictionary mapping configuration types to their binary content."""
         return {ftype: getattr(self, ftype) for ftype in self.non_null_configs_keys()}
+
+    def get_encoded_config_data(self) -> dict[str, str]:
+        return {ftype: content.hex() for ftype, content in self.get_config_data().items()}
+
+    def filestring(self) -> str:
+        return f"hermes_{self.id:03d}_{self.model}_{self.date:%Y%m%d}"
 
 
 def config_to_crc16(
@@ -89,69 +91,3 @@ def config_to_sha256(
     for config_type in ordered_keys:
         hasher.update(getattr(config, config_type))
     return hasher.hexdigest(), ordered_keys
-
-
-def config_to_readme(config: Configuration) -> str:
-    """
-    Generate a README file for a configuration archive.
-    Will raise ValueError if `config` has no configuration files.
-    """
-    non_null_configs = config.non_null_configs_keys()
-    sha256sum, order = config_to_sha256(config, ordered_keys=non_null_configs)
-
-    sections = [
-        f"Configuration ID: {config.id}",
-        f"Payload model: {config.model}",
-        f"Created on: {config.date}",
-        f"Author: {config.author}",
-        f"Delivered status: {config.delivered}",
-        f"Included configurations: {', '.join(non_null_configs)}",
-    ]
-
-    if config.delivered:
-        sections.append(f"Delivery time: {config.deliver_time}")
-
-    sections.append(f"Upload status: {config.uploaded}")
-    if config.uploaded:
-        sections.append(f"Upload time: {config.upload_time}")
-
-    sections.extend(
-        [
-            f"SHA256 hash: {sha256sum}",
-            "",
-            "Comments:",
-            f"* Hash check with `cat {' '.join(map(lambda s: s + '.cfg', order))} | sha256sum`",
-        ]
-    )
-    return "\n".join(sections)
-
-
-def config_to_archive(config: Configuration, format: Literal["zip", "tar"] = "zip") -> bytes:
-    """
-    Creates an archive containing configuration files from a Configuration instance.
-    """
-    buffer = io.BytesIO()
-
-    if format == "zip":
-        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
-            for ftype in config.non_null_configs_keys():
-                content = getattr(config, ftype)
-                archive.writestr(f"{ftype}.cfg", content)
-            archive.writestr("readme.txt", config_to_readme(config))
-
-    elif format == "tar":
-        with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
-            for ftype in config.non_null_configs_keys():
-                content = getattr(config, ftype)
-                content_buffer = io.BytesIO(content)
-                info = tarfile.TarInfo(f"{ftype}.cfg")
-                info.size = len(content)
-
-                archive.addfile(info, content_buffer)
-            readme_content = config_to_readme(config).encode("utf-8")
-            info = tarfile.TarInfo("readme.txt")
-            info.size = len(readme_content)
-            archive.addfile(info, io.BytesIO(readme_content))
-    else:
-        raise ValueError(f"Unsupported format: {format}")
-    return buffer.getvalue()
