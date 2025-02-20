@@ -22,13 +22,13 @@ CONFIG_SIZE = {
     "obs": 5,
 }
 _STANDARD_FILENAMES = {
-    "acq": FileName("acq", "cfg"),
-    "acq0": FileName("acq0", "cfg"),
-    "asic0": FileName("asic0", "cfg"),
-    "asic1": FileName("asic1", "cfg"),
-    "bee": FileName("bee", "cfg"),
-    "liktrg": FileName("liktrg", "par"),
-    "obs": FileName("obs", "cfg"),
+    "acq": FileName("ACQ", "cfg"),
+    "acq0": FileName("ACQ0", "cfg"),
+    "asic0": FileName("ASIC0", "cfg"),
+    "asic1": FileName("ASIC1", "cfg"),
+    "bee": FileName("BEE", "cfg"),
+    "liktrg": FileName("LIKTRG", "par"),
+    "obs": FileName("OBS", "cfg"),
 }
 STANDARD_FILENAMES = {k: str(v) for k, v in _STANDARD_FILENAMES.items()}
 STANDARD_SUFFIXES = tuple({f.SUFFIX for f in _STANDARD_FILENAMES.values()})

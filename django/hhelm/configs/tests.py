@@ -72,7 +72,7 @@ from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from hermes import CONFIG_TYPES
+from hermes import CONFIG_TYPES, STANDARD_FILENAMES
 from hhelm.settings import BASE_DIR
 
 from .forms import DeliverConfiguration
@@ -107,7 +107,7 @@ class ConfigurationModelTest(TestCase):
 
         cls.valid_config = Configuration.objects.create(
             author=cls.test_user,
-            model="1",  # H1
+            model="H1",  # H1
             acq=b"x" * cls.valid_len_acq_data,
             acq0=b"x" * cls.valid_len_acq_data,
             asic0=b"x" * cls.valid_len_asic_data,
@@ -167,7 +167,7 @@ class ConfigurationModelTest(TestCase):
             sizes = {k: v for k, v in valid_sizes.items()}
             sizes[field] = invalid_data
             with self.assertRaises(ValidationError):
-                config = Configuration(author=self.test_user, model="1", **invalid_sizes)
+                config = Configuration(author=self.test_user, model="H1", **invalid_sizes)
                 config.full_clean()
 
     def test_author_protection(self):
@@ -189,14 +189,18 @@ class ConfigurationModelTest(TestCase):
 
     def test_time_assignment(self):
         """Test upload_time field assignment"""
-        test_time = timezone.now()
-        self.valid_config.upload_time = test_time
-        self.valid_config.deliver_time = test_time
+        upload_time = timezone.now()
+        deliver_time = upload_time - timezone.timedelta(hours=1)
+
+        self.valid_config.deliver_time = deliver_time
+        self.valid_config.delivered = True
+        self.valid_config.upload_time = upload_time
+        self.valid_config.uploaded = True
         self.valid_config.save()
 
         self.valid_config.refresh_from_db()
-        self.assertEqual(self.valid_config.upload_time, test_time)
-        self.assertEqual(self.valid_config.deliver_time, test_time)
+        self.assertEqual(self.valid_config.upload_time, upload_time)
+        self.assertEqual(self.valid_config.deliver_time, deliver_time)
 
     def test_configuration_creation_with_partial_data(self):
         """Test that a configuration can be created with only some config files"""
@@ -216,6 +220,99 @@ class ConfigurationModelTest(TestCase):
                 model="H1",
             )
             config.full_clean()
+
+    def test_deliver_time_requires_delivered_flag(self):
+        """Test that a configuration with non-null deliver_time must have delivered=True"""
+        config = Configuration(
+            author=self.test_user,
+            model="H1",
+            acq=b"x" * self.valid_len_acq_data,
+            deliver_time=timezone.now(),
+            delivered=False  # This violates the constraint
+        )
+        with self.assertRaises(ValidationError):
+            config.full_clean()
+
+        # Fix the constraint violation
+        config.delivered = True
+        config.full_clean()  # Should not raise an exception
+
+    def test_upload_time_requires_uploaded_flag(self):
+        """Test that a configuration with non-null upload_time must have uploaded=True"""
+        config = Configuration(
+            author=self.test_user,
+            model="H1",
+            acq=b"x" * self.valid_len_acq_data,
+            upload_time=timezone.now(),
+            uploaded=False,  # This violates the constraint
+        )
+        with self.assertRaises(ValidationError):
+            config.full_clean()
+
+        # Fix the constraint violation
+        config.delivered = True
+        config.uploaded = True
+        config.full_clean()  # Should not raise an exception
+
+    def test_uploaded_implies_delivered(self):
+        config = Configuration(
+            author=self.test_user,
+            model="H1",
+            acq=b"x" * self.valid_len_acq_data,
+            upload_time=None,
+            uploaded=False,
+            delivered=True,
+            deliver_time=timezone.now(),
+        )
+        config.full_clean()
+
+
+    def test_upload_time_after_deliver_time(self):
+        """Test that upload_time must be later than deliver_time if both exist"""
+        test_time = timezone.now()
+
+        # Case 1: deliver_time is earlier than upload_time
+        config = Configuration(
+            author=self.test_user,
+            model="H1",
+            acq=b"x" * self.valid_len_acq_data,
+            deliver_time=test_time,
+            delivered=True,
+            upload_time=test_time + timezone.timedelta(hours=1),
+            uploaded=True,
+        )
+        with self.assertRaises(ValidationError):
+            config.full_clean()
+
+        # Case 2: deliver_time equals upload_time
+        config.deliver_time = test_time
+        config.upload_time = test_time
+        with self.assertRaises(ValidationError):
+            config.full_clean()
+
+        # Case 3: deliver_time is later than upload_time (valid)
+        config.deliver_time = test_time
+        config.upload_time = test_time - timezone.timedelta(hours=2)
+        with self.assertRaises(ValidationError):
+            config.full_clean()
+
+        # note for the next test the flags are still set
+        self.assertTrue(config.uploaded)
+        self.assertTrue(config.delivered)
+
+        # Case 4: Only deliver_time is set (valid)
+        config.upload_time = None
+        config.full_clean()  # Should not raise an exception
+
+        # Case 5: Only upload_time is set (valid)
+        config.deliver_time = None
+        config.upload_time = test_time
+        config.full_clean()  # Should not raise an exception
+
+        # Case 6: Neither time is set (valid)
+        config.deliver_time = None
+        config.upload_time = None
+        config.full_clean()  # Should not raise an exception
 
 
 class ConfigurationFormTest(TestCase):
@@ -357,23 +454,23 @@ class ConfigurationViewTest(TestCase):
         cls.valid_len_liktrg_data = 38
 
         cls.files_dummy_valid_length = {
-            "acq": SimpleUploadedFile("acq.cfg", b"x" * cls.valid_len_acq_data),
-            "acq0": SimpleUploadedFile("acq0.cfg", b"x" * cls.valid_len_acq_data),
-            "asic0": SimpleUploadedFile("asic0.cfg", b"x" * cls.valid_len_asic_data),
-            "asic1": SimpleUploadedFile("asic1.cfg", b"x" * cls.valid_len_asic_data),
-            "bee": SimpleUploadedFile("bee.cfg", b"x" * cls.valid_len_bee_data),
-            "obs": SimpleUploadedFile("obs.cfg", b"x" * cls.valid_len_obs_data),
-            "liktrg": SimpleUploadedFile("liktrg.par", b"x" * cls.valid_len_liktrg_data),
+            "acq": SimpleUploadedFile("ACQ.cfg", b"x" * cls.valid_len_acq_data),
+            "acq0": SimpleUploadedFile("ACQ0.cfg", b"x" * cls.valid_len_acq_data),
+            "asic0": SimpleUploadedFile("ASIC0.cfg", b"x" * cls.valid_len_asic_data),
+            "asic1": SimpleUploadedFile("ASIC1.cfg", b"x" * cls.valid_len_asic_data),
+            "bee": SimpleUploadedFile("BEE.cfg", b"x" * cls.valid_len_bee_data),
+            "obs": SimpleUploadedFile("OBS.cfg", b"x" * cls.valid_len_obs_data),
+            "liktrg": SimpleUploadedFile("LIKTRG.par", b"x" * cls.valid_len_liktrg_data),
         }
 
         cls.files_dummy_wrong_length = {
-            "acq": SimpleUploadedFile("acq.cfg", b"x" * (cls.valid_len_acq_data + 1)),
-            "acq0": SimpleUploadedFile("acq0.cfg", b"x" * (cls.valid_len_acq_data - 1)),
-            "asic0": SimpleUploadedFile("asic0.cfg", b"x" * (cls.valid_len_asic_data + 1)),
-            "asic1": SimpleUploadedFile("asic1.cfg", b"x" * (cls.valid_len_asic_data - 1)),
-            "bee": SimpleUploadedFile("bee.cfg", b"x" * (cls.valid_len_bee_data + 1)),
-            "obs": SimpleUploadedFile("obs.cfg", b"x" * (cls.valid_len_obs_data + 1)),
-            "liktrg": SimpleUploadedFile("liktrg.par", b"x" * (cls.valid_len_liktrg_data + 1)),
+            "acq": SimpleUploadedFile("ACQ.cfg", b"x" * (cls.valid_len_acq_data + 1)),
+            "acq0": SimpleUploadedFile("ACQ.cfg", b"x" * (cls.valid_len_acq_data - 1)),
+            "asic0": SimpleUploadedFile("ASIC0.cfg", b"x" * (cls.valid_len_asic_data + 1)),
+            "asic1": SimpleUploadedFile("ASIC1.cfg", b"x" * (cls.valid_len_asic_data - 1)),
+            "bee": SimpleUploadedFile("BEE.cfg", b"x" * (cls.valid_len_bee_data + 1)),
+            "obs": SimpleUploadedFile("OBS.cfg", b"x" * (cls.valid_len_obs_data + 1)),
+            "liktrg": SimpleUploadedFile("LIKTRG.par", b"x" * (cls.valid_len_liktrg_data + 1)),
         }
 
         cls.files_fm6 = {
@@ -855,7 +952,7 @@ class ConfigurationEmailTest(TestCase):
         self.assertEqual(len(email.attachments), 1)
         with zipfile.ZipFile(BytesIO(email.attachments[0][1])) as zf:
             filenames = zf.namelist()
-        self.assertTrue(all(f"{type}.cfg" in filenames for type in ["acq", "acq0", "asic0", "asic1", "bee"]))
+        self.assertTrue(all(STANDARD_FILENAMES[ftype] in filenames for ftype in ["acq", "acq0", "asic0", "asic1", "bee"]))
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_delivery_with_multiple_cc(self):
@@ -915,7 +1012,7 @@ class ConfigurationEmailTest(TestCase):
             filenames = [*filter(lambda fn: not fn.startswith("readme"), filenames)]
             self.assertTrue(any(filenames))
             for filename in filenames:
-                ftype = filename.split(".")[0]
+                ftype = filename.split(".")[0].lower()
                 content = zf.read(filename)
                 original_file = self.files_fm6[ftype].open().read()
                 self.assertEqual(content, original_file)
@@ -968,7 +1065,7 @@ class ConfigurationEmailTest(TestCase):
         email = mail.outbox[0]
         with zipfile.ZipFile(BytesIO(email.attachments[0][1])) as zf:
             filenames = set(fn for fn in zf.namelist() if not fn.startswith("readme"))
-            self.assertEqual(filenames, {"acq.cfg", "bee.cfg"})
+            self.assertEqual(filenames, {STANDARD_FILENAMES["acq"], STANDARD_FILENAMES["bee"]})
 
         # check database record
         config = Configuration.objects.last()

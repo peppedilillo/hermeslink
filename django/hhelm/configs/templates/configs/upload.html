@@ -5,9 +5,7 @@
 
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
-    
-    {{ form.non_field_errors }}
-    
+
     <div class="my-6">
         <label class="block font-medium my-6 text-2xl">Spacecraft Model:</label>
         <div class="flex gap-4">
@@ -53,7 +51,11 @@
             {% endif %}
         {% endfor %}
     </div>
-
+    <div>
+        {% if form.non_field_errors %}
+          <div class="text-red-500 text-sm mt-1">{{ form.non_field_errors }}</div>
+        {% endif %}
+    </div>
     <div class="flex justify-end mt-6">
         <button type="submit" class="text-4xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
             <i class="bi bi-arrow-right"></i>

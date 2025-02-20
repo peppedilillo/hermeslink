@@ -2,6 +2,7 @@ from collections import OrderedDict
 from hashlib import sha256
 from smtplib import SMTPException
 from typing import Literal
+from functools import partial
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -20,6 +21,7 @@ from hermes import SPACECRAFTS_NAMES
 
 from . import forms
 from . import models
+from .forms import CommitConfiguration
 from .validators import Status, validate_configurations
 from .downloads import write_archive
 from .models import config_to_sha256
@@ -230,27 +232,48 @@ def deliver(request: HttpRequest) -> HttpResponse:
     )
 
 
-EMPTY_HISTORY_MESSAGE = "No configuration has been uploaded yet."
-
-
 @login_required
-def history(request: HttpRequest) -> HttpResponse:
+def _index(
+        request: HttpRequest,
+        order_by: tuple[str],
+        filter_by: dict,
+        header: str,
+        empty_message: str,
+) -> HttpResponse:
     """
     View to display all recorded configurations.
     """
-    configurations = models.Configuration.objects.order_by("-date")
+    configurations = models.Configuration.objects.filter(**filter_by).order_by(*order_by)
     paginator = Paginator(configurations, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
     return render(
         request,
-        "configs/history.html",
-        {"page_obj": page_obj, "empty_message": EMPTY_HISTORY_MESSAGE},
-    )
+        "configs/index.html",
+        {
+            "page_obj": page_obj,
+            "empty_message": empty_message,
+            "header": header,
+    })
+
+history = partial(
+    _index,
+    header="History",
+    filter_by={},
+    order_by=("-date",),
+    empty_message="No configuration has been uploaded yet.",
+)
+pending = partial(
+    _index,
+    header="Commit",
+    filter_by={"uploaded": False},
+    order_by=("-date",),
+    empty_message="No pending configuration.",
+)
 
 
 @login_required
-def download_config(request, config_id: int, format: Literal["zip", "tar"] = "zip"):
+def download(request, config_id: int, format: Literal["zip", "tar"] = "zip"):
     """
     View function to download a configuration archive.
     """
@@ -258,7 +281,7 @@ def download_config(request, config_id: int, format: Literal["zip", "tar"] = "zi
         return HttpResponse("400: Invalid format specified", status=400)
 
     try:
-        config = Configuration.objects.get(id=config_id)
+        config = Configuration.objects.get(pk=config_id)
     except Configuration.DoesNotExist:
         return HttpResponse("404: Configuration not found", status=404)
 
@@ -270,3 +293,33 @@ def download_config(request, config_id: int, format: Literal["zip", "tar"] = "zi
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
 
     return response
+
+
+@login_required
+def commit(request, config_id: int):
+    try:
+        config = Configuration.objects.get(pk=config_id)
+    except Configuration.DoesNotExist:
+        return HttpResponse("404: Configuration not found", status=404)
+
+    if config.uploaded:
+        return HttpResponse("403: Configuration has already been committed", status=403)
+
+    if request.method == "POST":
+        form = CommitConfiguration(request.POST, instance=config)
+        if form.is_valid():
+            config.uploaded = True
+            config.upload_time = form.cleaned_data["upload_time"]
+            form.save()
+            return redirect("configs:history")
+    else:
+        form = CommitConfiguration(instance=config)
+
+    return render(
+        request,
+        "configs/commit.html",
+        {
+            "form": form,
+            "config": config,
+        },
+    )
