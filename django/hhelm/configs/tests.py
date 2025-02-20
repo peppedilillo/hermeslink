@@ -22,7 +22,7 @@ FORM TESTS:
 * Test satellite model selection validation
 * Test email delivery form validation including CC field formatting
 
-VIEWS TESTS:
+CONFIGURATION VIEWS TESTS:
 * Test authentication requirements for all views
 * Test view access and template usage
 * Test successful file upload flow and session data creation:
@@ -51,8 +51,19 @@ EMAIL DELIVERY TESTS:
   - Correct archive contents
   - Database record accuracy
   - Email attachment verification
-"""
 
+UPLINK TIMESTAMP VIEW TEST:
+* Requires authentication
+* Valid timestamps go through
+* Invalid timestamps don't
+* Test against configurations already timestamped, or non existent
+
+DOWNLOAD VIEW TEST
+* Requires authentication
+* Both tars and zip contains all file, and their content match
+* Tests against non-existent configuration and wrong formats
+"""
+import tarfile
 from io import BytesIO
 from pathlib import Path
 import shutil
@@ -75,7 +86,7 @@ from django.utils import timezone
 from hermes import CONFIG_TYPES, STANDARD_FILENAMES
 from hhelm.settings import BASE_DIR
 
-from .forms import DeliverConfiguration
+from .forms import DeliverConfiguration, CommitConfiguration
 from .forms import UploadConfiguration
 from .models import Configuration
 from .validators import Status
@@ -1074,3 +1085,284 @@ class ConfigurationEmailTest(TestCase):
         self.assertIsNone(getattr(config, "acq0"))
         self.assertIsNone(getattr(config, "asic0"))
         self.assertIsNone(getattr(config, "asic1"))
+
+
+class CommitViewTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # Create test user
+        cls.user = User.objects.create_user(username="testuser", password="testpass123")
+
+        # Create base configuration data
+        cls.valid_config_data = {
+            "acq": b"x" * 20,  # 20 bytes as per CONFIG_SIZE
+            "acq0": b"x" * 20,
+            "asic0": b"x" * 124,
+            "asic1": b"x" * 124,
+            "bee": b"x" * 64,
+        }
+
+        # Create a test configuration
+        cls.config = Configuration.objects.create(
+            author=cls.user,
+            model="H1",
+            delivered=True,
+            deliver_time=timezone.now() - timezone.timedelta(days=1),
+            uploaded=False,
+            **cls.valid_config_data
+        )
+        # work around, otherwise date will be set as per deliver time
+        cls.config.date = cls.config.deliver_time
+        cls.config.save()
+
+    def setUp(self):
+        self.client = Client()
+        self.client.login(username="testuser", password="testpass123")
+
+    def test_commit_view_get(self):
+        """Test GET request to commit view displays form correctly"""
+        response = self.client.get(reverse("configs:commit", args=[self.config.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "configs/commit.html")
+        self.assertIsInstance(response.context["form"], CommitConfiguration)
+        self.assertEqual(response.context["config"], self.config)
+
+    def test_commit_view_authentication_required(self):
+        """Test that commit view requires authentication"""
+        self.client.logout()
+        response = self.client.get(reverse("configs:commit", args=[self.config.id]))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith("/accounts/login/"))
+
+    def test_commit_view_post_success(self):
+        """Test successful commit with valid upload time"""
+        upload_time = timezone.now()
+        response = self.client.post(
+            reverse("configs:commit", args=[self.config.id]),
+            {"upload_time": upload_time.strftime("%Y-%m-%dT%H:%M:%S")},
+            follow=True
+        )
+
+        # Check redirect
+        self.assertRedirects(response, reverse("configs:history"))
+
+        # Refresh config from db and verify changes
+        self.config.refresh_from_db()
+        self.assertTrue(self.config.uploaded)
+        self.assertIsNotNone(self.config.upload_time)
+
+    def test_commit_view_invalid_time_format(self):
+        """Test commit with invalid time format"""
+        response = self.client.post(
+            reverse("configs:commit", args=[self.config.id]),
+            {"upload_time": "invalid-time-format"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(self.config.uploaded)
+        self.assertIsNone(self.config.upload_time)
+
+    def test_commit_view_time_before_deliver(self):
+        """Test commit with upload time before deliver time"""
+        upload_time = self.config.deliver_time - timezone.timedelta(hours=1)
+        response = self.client.post(
+            reverse("configs:commit", args=[self.config.id]),
+            {"upload_time": upload_time.strftime("%Y-%m-%dT%H:%M:%S")},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(self.config.uploaded)
+        self.assertIsNone(self.config.upload_time)
+
+    def test_commit_view_time_in_future(self):
+        """Test commit with upload time before deliver time"""
+        upload_time = self.config.deliver_time + timezone.timedelta(hours=1)
+        response = self.client.post(
+            reverse("configs:commit", args=[self.config.id]),
+            {"upload_time": upload_time.strftime("%Y-%m-%dT%H:%M:%S")},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(self.config.uploaded)
+        self.assertIsNone(self.config.upload_time)
+
+    def test_commit_view_nonexistent_config(self):
+        """Test accessing commit view with non-existent configuration ID"""
+        response = self.client.get(reverse("configs:commit", args=[99999]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_commit_view_already_uploaded(self):
+        """Test attempting to commit an already uploaded configuration"""
+        self.config.uploaded = True
+        self.config.upload_time = timezone.now()
+        self.config.save()
+
+        response = self.client.get(reverse("configs:commit", args=[self.config.id]))
+        self.assertEqual(response.status_code, 403)
+
+
+class DownloadViewTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(username="testuser", password="testpass123")
+
+        # Create base configuration data
+        cls.config_data = {
+            "acq": b"x" * 20,
+            "acq0": b"x" * 20,
+            "asic0": b"x" * 124,
+            "asic1": b"x" * 124,
+            "bee": b"x" * 64,
+        }
+
+        cls.config = Configuration.objects.create(
+            author=cls.user,
+            model="H1",
+            delivered=True,
+            deliver_time=timezone.now(),
+            **cls.config_data
+        )
+
+    def setUp(self):
+        self.client = Client()
+        self.client.login(username="testuser", password="testpass123")
+
+    def test_download_zip_format(self):
+        """Test downloading configuration in ZIP format"""
+        response = self.client.get(reverse("configs:download", args=[self.config.id, "zip"]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/zip")
+
+        # Verify ZIP content
+        with zipfile.ZipFile(BytesIO(response.content)) as zf:
+            # Check all files are present
+            self.assertTrue("ACQ.cfg" in zf.namelist())
+            self.assertTrue("ACQ0.cfg" in zf.namelist())
+            self.assertTrue("ASIC0.cfg" in zf.namelist())
+            self.assertTrue("ASIC1.cfg" in zf.namelist())
+            self.assertTrue("BEE.cfg" in zf.namelist())
+            self.assertTrue("readme.txt" in zf.namelist())
+
+            # Verify file contents
+            self.assertEqual(zf.read("ACQ.cfg"), self.config_data["acq"])
+            self.assertEqual(zf.read("ASIC0.cfg"), self.config_data["asic0"])
+
+    def test_download_tar_format(self):
+        """Test downloading configuration in TAR format"""
+        response = self.client.get(reverse("configs:download", args=[self.config.id, "tar"]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "application/x-tar")
+
+        with tarfile.open(fileobj=BytesIO(response.content), mode="r:gz") as tf:
+            names = tf.getnames()
+            self.assertTrue("ACQ.cfg" in names)
+            self.assertTrue("ACQ0.cfg" in names)
+            self.assertTrue("ASIC0.cfg" in names)
+            self.assertTrue("ASIC1.cfg" in names)
+            self.assertTrue("BEE.cfg" in names)
+            self.assertTrue("readme.txt" in names)
+
+    def test_download_invalid_format(self):
+        """Test downloading with invalid format specification"""
+        response = self.client.get(reverse("configs:download", args=[self.config.id, "invalid"]))
+        self.assertEqual(response.status_code, 400)
+
+    def test_download_nonexistent_config(self):
+        """Test downloading non-existent configuration"""
+        response = self.client.get(reverse("configs:download", args=[99999, "zip"]))
+        self.assertEqual(response.status_code, 404)
+
+    def test_download_authentication_required(self):
+        """Test that download view requires authentication"""
+        self.client.logout()
+        response = self.client.get(reverse("configs:download", args=[self.config.id, "zip"]))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith("/accounts/login/"))
+
+
+class IndexViewsTest(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(username="testuser", password="testpass123")
+
+        # Create a few simple configurations for testing
+        base_time = timezone.now() - timezone.timedelta(days=5)
+
+        # Create one delivered but not uploaded config
+        cls.delivered_config = Configuration.objects.create(
+            author=cls.user,
+            model="H1",
+            delivered=True,
+            deliver_time=base_time,
+            uploaded=False,
+            acq=b"x" * 20,
+            asic0=b"x" * 124,
+        )
+
+        # Create one delivered and uploaded config
+        cls.uploaded_config = Configuration.objects.create(
+            author=cls.user,
+            model="H2",
+            delivered=True,
+            deliver_time=base_time - timezone.timedelta(days=1),
+            uploaded=True,
+            upload_time=base_time,
+            acq=b"x" * 20,
+            asic0=b"x" * 124,
+        )
+
+    def setUp(self):
+        self.client = Client()
+        self.client.login(username="testuser", password="testpass123")
+
+    def test_history_view(self):
+        """Test history view displays all configurations"""
+        response = self.client.get(reverse("configs:history"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "configs/index.html")
+
+        # Check that all configurations are shown
+        self.assertEqual(response.context["page_obj"].paginator.count, 2)
+
+    def test_pending_view(self):
+        """Test pending view shows only non-uploaded configurations"""
+        response = self.client.get(reverse("configs:pending"))
+        self.assertEqual(response.status_code, 200)
+
+        # Verify only non-uploaded configs are shown
+        self.assertEqual(response.context["page_obj"].paginator.count, 1)
+        if response.context["page_obj"]:
+            config = response.context["page_obj"][0]
+            self.assertEqual(config.id, self.delivered_config.id)
+            self.assertFalse(config.uploaded)
+
+    def test_history_view_empty(self):
+        """Test history view with no configurations"""
+        Configuration.objects.all().delete()
+        response = self.client.get(reverse("configs:history"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No configuration has been uploaded yet.")
+
+    def test_pending_view_empty(self):
+        """Test pending view with no pending configurations"""
+        # Mark all configs as uploaded
+        self.delivered_config.uploaded = True
+        self.delivered_config.upload_time = timezone.now()
+        self.delivered_config.save()
+
+        response = self.client.get(reverse("configs:pending"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No pending configuration.")
+
+    def test_pending_authentication_required(self):
+        """Test that download view requires authentication"""
+        self.client.logout()
+        response = self.client.get(reverse("configs:pending"))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith("/accounts/login/"))
+
+    def test_history_authentication_required(self):
+        """Test that download view requires authentication"""
+        self.client.logout()
+        response = self.client.get(reverse("configs:history"))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith("/accounts/login/"))
