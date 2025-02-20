@@ -1,11 +1,11 @@
 import io
 import tarfile
-import zipfile
 from typing import Literal
+import zipfile
 
-from hermes import STANDARD_FILENAMES
 from configs.models import Configuration
 from configs.reports import write_config_readme_txt
+from hermes import STANDARD_FILENAMES
 
 
 def write_archive(config: Configuration, format: Literal["zip", "tar"] = "zip") -> bytes:

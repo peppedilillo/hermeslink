@@ -7,6 +7,7 @@ from hermes.configs import bytest_to_bitdict_asic
 from hermes.configs import parse_bitdict_asic
 from hermes.payloads import UNBOND
 
+
 def crc16(data: bytes) -> bytes:
     """
     Calculate CRC16-CCITT (0xFFFF initial value, polynomial 0x1021)
@@ -40,7 +41,8 @@ def crc16(data: bytes) -> bytes:
         if xor_flag:
             crc = (crc ^ poly) & 0xFFFF
 
-    return crc.to_bytes(2, byteorder='big')
+    return crc.to_bytes(2, byteorder="big")
+
 
 class Status(int, Enum):
     PASSED = 0
@@ -171,12 +173,18 @@ def validate_configurations(
         ],
         "asic1": [
             lambda: test_asic_size(bytesdict["asic1"]),
-            lambda: test_asic1_unbounded_discriminators_are_off(parse_bitdict_asic(bytest_to_bitdict_asic(bytesdict["asic1"])), model),
-            lambda: test_asic1_trigger_logic_is_internal_single(parse_bitdict_asic(bytest_to_bitdict_asic(bytesdict["asic1"])), model),
+            lambda: test_asic1_unbounded_discriminators_are_off(
+                parse_bitdict_asic(bytest_to_bitdict_asic(bytesdict["asic1"])), model
+            ),
+            lambda: test_asic1_trigger_logic_is_internal_single(
+                parse_bitdict_asic(bytest_to_bitdict_asic(bytesdict["asic1"])), model
+            ),
         ],
         "asic0": [
             lambda: test_asic_size(bytesdict["asic0"]),
-            lambda: test_asic0_trigger_logic_is_internal_or(parse_bitdict_asic(bytest_to_bitdict_asic(bytesdict["asic0"])), model),
+            lambda: test_asic0_trigger_logic_is_internal_or(
+                parse_bitdict_asic(bytest_to_bitdict_asic(bytesdict["asic0"])), model
+            ),
         ],
         "bee": [
             lambda: test_bee_size(bytesdict["bee"]),

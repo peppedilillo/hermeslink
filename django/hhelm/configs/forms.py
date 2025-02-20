@@ -1,14 +1,15 @@
-from typing import Literal
 import re
+from typing import Literal
 
+from django import forms
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import EmailValidator
+
 from hermes import CONFIG_SIZE
 from hermes import CONFIG_TYPES
-from hhelm.settings import EMAIL_CONFIGS_RECIPIENT, TIME_ZONE
-
-from django import forms
+from hhelm.settings import EMAIL_CONFIGS_RECIPIENT
+from hhelm.settings import TIME_ZONE
 
 from .models import Configuration
 
@@ -49,6 +50,7 @@ class UploadConfiguration(forms.Form):
     """
     A form for uploading configuration files for a specific payload model.
     """
+
     model = forms.ChoiceField(choices=Configuration.MODELS)
 
     acq0 = forms.FileField(required=False, validators=[lambda f: check_length(f, "acq0") if f else None])
@@ -63,9 +65,7 @@ class UploadConfiguration(forms.Form):
         cleaned_data = super().clean()
 
         if not any(cleaned_data.get(ftype) for ftype in CONFIG_TYPES):
-            raise forms.ValidationError(
-                "At least one configuration file must be provided."
-            )
+            raise forms.ValidationError("At least one configuration file must be provided.")
 
         return cleaned_data
 
@@ -74,6 +74,7 @@ class DeliverConfiguration(forms.Form):
     """
     A form for mailing a configuration.
     """
+
     recipient = forms.CharField(initial=EMAIL_CONFIGS_RECIPIENT, disabled=True)
     subject = forms.CharField(initial="HERMES configuration files")
     cc = forms.CharField(required=False)
@@ -103,26 +104,23 @@ class DeliverConfiguration(forms.Form):
 
 class CommitConfiguration(forms.ModelForm):
     upload_time = forms.DateTimeField(
-        input_formats=['%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S'],
+        input_formats=["%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S"],
         required=True,
         help_text="A string formatted as `{YYYY}-{MM}-{DD}T{HH}:{MM}:{SS}Z` or `{YYYY}-{MM}-{DD}T{HH}:{MM}:{SS}`.\n "
-                  "The 'Z' stands for 'Zero timezone'. If the strings ends with `Z`, UTC timezone is assumed. Otherwise timezone is automatically set to 'Europe/Rome'.\n",
+        "The 'Z' stands for 'Zero timezone'. If the strings ends with `Z`, UTC timezone is assumed. Otherwise timezone is automatically set to 'Europe/Rome'.\n",
     )
 
     class Meta:
         model = Configuration
-        fields = ['upload_time']
+        fields = ["upload_time"]
 
     def clean_upload_time(self):
         # we only accept patterns like "2024-12-22T12:12:12" or "2024-12-22T12:12:12Z"
         format_patterns = [
-            r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z?$',
-            r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z?',
+            r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z?$",
+            r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z?",
         ]
-        valid_format = any(
-            re.match(pattern, self.data.get("upload_time"))
-            for pattern in format_patterns
-        )
+        valid_format = any(re.match(pattern, self.data.get("upload_time")) for pattern in format_patterns)
         if not valid_format:
             raise forms.ValidationError("Time must be in format YYYY-MM-DDThh:mm:ssZ or YYYY-MM-DDThh:mm:ss")
 

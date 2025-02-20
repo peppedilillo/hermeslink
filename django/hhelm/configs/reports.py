@@ -4,15 +4,20 @@ from typing import Literal
 
 from django.utils import timezone
 
-from hermes import STANDARD_FILENAMES, STANDARD_SUFFIXES
+from hermes import STANDARD_FILENAMES
+from hermes import STANDARD_SUFFIXES
 from hhelm.utils import LOGO_ASCII
-from .models import Configuration, config_to_sha256
 
-from .validators import TestResult, crc16, validate_configurations
+from .models import config_to_sha256
+from .models import Configuration
+from .validators import crc16
+from .validators import TestResult
+from .validators import validate_configurations
 
 
 class TokenType(Enum):
     """Token types for the test report lexer."""
+
     INDENT = 0
     NEWLINE = 1
     LITERAL = 2
@@ -27,6 +32,7 @@ class TokenType(Enum):
 @dataclass
 class Token:
     """A lexical token with type and content."""
+
     ttype: TokenType
     lexeme: str
 
@@ -39,6 +45,7 @@ class Scanner:
     $Test results:
     $$Test STATUS: MESSAGE
     """
+
     def __init__(self, text: str):
         self.text = text
         self.token_list = []
@@ -99,14 +106,14 @@ class Scanner:
     def _catch_literal(self):
         while (next_char := self._peek()) and (not next_char.isspace()) and next_char != "$":
             self._advance()
-        return self.text[self.start: self.current]
+        return self.text[self.start : self.current]
 
     def _add_token(self, token: Token):
         self.token_list.append(token)
 
 
 class Parser:
-    def __init__(self, width:int = 68, indent:str = " " * 4, fmt:Literal["html", "txt"] = "html"):
+    def __init__(self, width: int = 68, indent: str = " " * 4, fmt: Literal["html", "txt"] = "html"):
         """
         Parses a token list into an HTML-formatted test report with proper indentation
         and line wrapping.
@@ -237,10 +244,8 @@ def _compose(
         fileline = ""
     return report
 
-def write_test_report_html(
-    test_results: dict[str, list[TestResult]],
-    config_data: dict[str, str]
-) -> str:
+
+def write_test_report_html(test_results: dict[str, list[TestResult]], config_data: dict[str, str]) -> str:
     """
     Generates an HTML-formatted report from test results and configuration data.
 
@@ -257,10 +262,8 @@ def write_test_report_html(
         html = "Could not parse report."
     return html
 
-def write_test_report_txt(
-    test_results: dict[str, list[TestResult]],
-    config_data: dict[str, str]
-) -> str:
+
+def write_test_report_txt(test_results: dict[str, list[TestResult]], config_data: dict[str, str]) -> str:
     """
     Generates a plain text report from test results and configuration data.
 
@@ -303,20 +306,12 @@ def write_config_readme_txt(config: Configuration) -> str:
     ]
 
     if config.delivered:
-        section_metadata.append(
-            f"$Delivery time: {config.deliver_time}"
-        )
+        section_metadata.append(f"$Delivery time: {config.deliver_time}")
 
-    section_metadata.append(
-        f"$Upload status: {config.uploaded}"
-    )
+    section_metadata.append(f"$Upload status: {config.uploaded}")
     if config.uploaded:
-        section_metadata.append(
-            f"$Upload time: {config.upload_time}"
-        )
-    section_metadata.append(
-        f"$SHA256 hash: 0x{sha256sum} "
-    )
+        section_metadata.append(f"$Upload time: {config.upload_time}")
+    section_metadata.append(f"$SHA256 hash: 0x{sha256sum} ")
 
     test_report = _compose(
         validate_configurations(config.get_config_data(), config.model),
@@ -331,9 +326,8 @@ def write_config_readme_txt(config: Configuration) -> str:
     section_comments = [
         "\n~ COMMENTS:",
         f"$* Hash check with `cat {' '.join([STANDARD_FILENAMES[ftype] for ftype in order])} | sha256sum`",
-        f""
+        f"",
     ]
-
 
     text = "\n".join(section_intro + section_metadata + section_test + section_comments)
     return Parser(width=120, indent="  ", fmt="txt").parse(Scanner(text).scan_tokens())

@@ -1,8 +1,8 @@
 from collections import OrderedDict
+from functools import partial
 from hashlib import sha256
 from smtplib import SMTPException
 from typing import Literal
-from functools import partial
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -21,13 +21,13 @@ from hermes import SPACECRAFTS_NAMES
 
 from . import forms
 from . import models
-from .forms import CommitConfiguration
-from .validators import Status, validate_configurations
 from .downloads import write_archive
+from .forms import CommitConfiguration
 from .models import config_to_sha256
 from .models import Configuration
 from .reports import write_test_report_html
-
+from .validators import Status
+from .validators import validate_configurations
 
 
 # in this module we will deal with OrderedDict for bookkeeping the configuration file data.
@@ -189,12 +189,7 @@ def deliver(request: HttpRequest) -> HttpResponse:
 
     def cleanup():
         """Cleans up session data."""
-        for key in [
-            "config_data",
-            "config_hash",
-            "config_model",
-            "test_status"
-        ]:
+        for key in ["config_data", "config_hash", "config_model", "test_status"]:
             request.session.pop(key, None)
 
     if not session_is_valid(request) or "test_status" not in request.session:
@@ -234,11 +229,11 @@ def deliver(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def _index(
-        request: HttpRequest,
-        order_by: tuple[str],
-        filter_by: dict,
-        header: str,
-        empty_message: str,
+    request: HttpRequest,
+    order_by: tuple[str],
+    filter_by: dict,
+    header: str,
+    empty_message: str,
 ) -> HttpResponse:
     """
     View to display all recorded configurations.
@@ -254,7 +249,9 @@ def _index(
             "page_obj": page_obj,
             "empty_message": empty_message,
             "header": header,
-    })
+        },
+    )
+
 
 history = partial(
     _index,

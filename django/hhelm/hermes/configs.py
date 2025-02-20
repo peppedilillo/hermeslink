@@ -11,7 +11,19 @@ class FileName:
         return f"{self.NAME}.{self.SUFFIX}"
 
 
-CONFIG_TYPES = tuple(sorted(("acq", "acq0", "asic0", "asic1", "bee", "liktrg", "obs",)))
+CONFIG_TYPES = tuple(
+    sorted(
+        (
+            "acq",
+            "acq0",
+            "asic0",
+            "asic1",
+            "bee",
+            "liktrg",
+            "obs",
+        )
+    )
+)
 CONFIG_SIZE = {
     "acq": 20,
     "acq0": 20,

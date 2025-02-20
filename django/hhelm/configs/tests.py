@@ -63,11 +63,12 @@ DOWNLOAD VIEW TEST
 * Both tars and zip contains all file, and their content match
 * Tests against non-existent configuration and wrong formats
 """
-import tarfile
+
 from io import BytesIO
 from pathlib import Path
 import shutil
 from smtplib import SMTPException
+import tarfile
 import tempfile
 from unittest.mock import patch
 import zipfile
@@ -83,10 +84,13 @@ from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from hermes import CONFIG_TYPES, STANDARD_FILENAMES
+
+from hermes import CONFIG_TYPES
+from hermes import STANDARD_FILENAMES
 from hhelm.settings import BASE_DIR
 
-from .forms import DeliverConfiguration, CommitConfiguration
+from .forms import CommitConfiguration
+from .forms import DeliverConfiguration
 from .forms import UploadConfiguration
 from .models import Configuration
 from .validators import Status
@@ -239,7 +243,7 @@ class ConfigurationModelTest(TestCase):
             model="H1",
             acq=b"x" * self.valid_len_acq_data,
             deliver_time=timezone.now(),
-            delivered=False  # This violates the constraint
+            delivered=False,  # This violates the constraint
         )
         with self.assertRaises(ValidationError):
             config.full_clean()
@@ -276,7 +280,6 @@ class ConfigurationModelTest(TestCase):
             deliver_time=timezone.now(),
         )
         config.full_clean()
-
 
     def test_upload_time_after_deliver_time(self):
         """Test that upload_time must be later than deliver_time if both exist"""
@@ -360,10 +363,7 @@ class ConfigurationFormTest(TestCase):
     def test_upload_form_partial_data(self):
         """Test that form accepts partial configuration files"""
         form_data = {"model": "H1"}
-        partial_files = {
-            "acq": self.valid_files["acq"],
-            "bee": self.valid_files["bee"]
-        }
+        partial_files = {"acq": self.valid_files["acq"], "bee": self.valid_files["bee"]}
         form = UploadConfiguration(data=form_data, files=partial_files)
         self.assertTrue(form.is_valid())
 
@@ -693,20 +693,12 @@ class ConfigurationViewTest(TestCase):
         """Testing all remaining combinations of uploads. Kinda slow."""
         from itertools import combinations
 
-        file_contents = {
-            ftype: self.files_fm6[ftype].read()
-            for ftype in self.files_fm6
-        }
+        file_contents = {ftype: self.files_fm6[ftype].read() for ftype in self.files_fm6}
 
         ftypes = ["acq", "acq0", "asic0", "asic1", "bee", "obs", "liktrg"]
         combs = list([s for r in range(2, 7) for s in combinations(ftypes, r)])
         for comb in combs:
-            files = {
-                ftype: SimpleUploadedFile(
-                    f"{ftype}.cfg",
-                    file_contents[ftype]
-                ) for ftype in comb
-            }
+            files = {ftype: SimpleUploadedFile(f"{ftype}.cfg", file_contents[ftype]) for ftype in comb}
             response = self.login_and_upload_fileset("H6", files)
             self.assertRedirects(response, reverse("configs:test"))
 
@@ -963,7 +955,9 @@ class ConfigurationEmailTest(TestCase):
         self.assertEqual(len(email.attachments), 1)
         with zipfile.ZipFile(BytesIO(email.attachments[0][1])) as zf:
             filenames = zf.namelist()
-        self.assertTrue(all(STANDARD_FILENAMES[ftype] in filenames for ftype in ["acq", "acq0", "asic0", "asic1", "bee"]))
+        self.assertTrue(
+            all(STANDARD_FILENAMES[ftype] in filenames for ftype in ["acq", "acq0", "asic0", "asic1", "bee"])
+        )
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_delivery_with_multiple_cc(self):
@@ -1057,13 +1051,8 @@ class ConfigurationEmailTest(TestCase):
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_partial_config_delivery(self):
         """Test delivery of partial configuration files"""
-        partial_files = {
-            "acq": self.files_fm6["acq"],
-            "bee": self.files_fm6["bee"]
-        }
-        self.client.post(reverse("configs:upload"),
-                         data={"model": "H6", **partial_files},
-                         follow=True)
+        partial_files = {"acq": self.files_fm6["acq"], "bee": self.files_fm6["bee"]}
+        self.client.post(reverse("configs:upload"), data={"model": "H6", **partial_files}, follow=True)
         self.client.get(reverse("configs:test"))
 
         form_data = {
@@ -1109,7 +1098,7 @@ class CommitViewTest(TestCase):
             delivered=True,
             deliver_time=timezone.now() - timezone.timedelta(days=1),
             uploaded=False,
-            **cls.valid_config_data
+            **cls.valid_config_data,
         )
         # work around, otherwise date will be set as per deliver time
         cls.config.date = cls.config.deliver_time
@@ -1140,7 +1129,7 @@ class CommitViewTest(TestCase):
         response = self.client.post(
             reverse("configs:commit", args=[self.config.id]),
             {"upload_time": upload_time.strftime("%Y-%m-%dT%H:%M:%S")},
-            follow=True
+            follow=True,
         )
 
         # Check redirect
@@ -1213,11 +1202,7 @@ class DownloadViewTest(TestCase):
         }
 
         cls.config = Configuration.objects.create(
-            author=cls.user,
-            model="H1",
-            delivered=True,
-            deliver_time=timezone.now(),
-            **cls.config_data
+            author=cls.user, model="H1", delivered=True, deliver_time=timezone.now(), **cls.config_data
         )
 
     def setUp(self):
