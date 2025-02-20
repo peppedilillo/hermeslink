@@ -34,35 +34,91 @@ class Configuration(models.Model):
 
     MODELS = tuple(zip(SPACECRAFTS_NAMES, SPACECRAFTS_NAMES))
 
-    date = models.DateTimeField(auto_now_add=True)
-    author = models.ForeignKey(to=CustomUser, related_name="configurations", on_delete=models.PROTECT)
+    date = models.DateTimeField(
+        auto_now_add=True,
+    )
+    author = models.ForeignKey(
+        to=CustomUser,
+        related_name="configurations",
+        on_delete=models.PROTECT,
+    )
     # this field is for when a configuration is first sent to the MOC
-    delivered = models.BooleanField(default=False)
-    deliver_time = models.DateTimeField(null=True, blank=True, validators=[validate_not_future])
+    delivered = models.BooleanField(
+        default=False,
+    )
+    deliver_time = models.DateTimeField(
+        null=True,
+        blank=True,
+        validators=[validate_not_future],
+    )
     # this field is for when a configuration is upload on-board by the MOC
-    uploaded = models.BooleanField(default=False)
-    upload_time = models.DateTimeField(null=True, blank=True, validators=[validate_not_future])
-    model = models.CharField(max_length=2, choices=MODELS)
+    uploaded = models.BooleanField(
+        default=False,
+    )
+    upload_time = models.DateTimeField(
+        null=True,
+        blank=True,
+        validators=[validate_not_future],
+    )
+    model = models.CharField(
+        max_length=2,
+        choices=MODELS,
+    )
     acq0 = models.BinaryField(
-        max_length=CONFIG_SIZE["acq0"], null=True, blank=True, validators=[MinLengthValidator(CONFIG_SIZE["acq0"])]
+        max_length=CONFIG_SIZE["acq0"],
+        null=True,
+        blank=True,
+        validators=[
+            MinLengthValidator(CONFIG_SIZE["acq0"]),
+        ],
     )
     acq = models.BinaryField(
-        max_length=CONFIG_SIZE["acq"], null=True, blank=True, validators=[MinLengthValidator(CONFIG_SIZE["acq"])]
+        max_length=CONFIG_SIZE["acq"],
+        null=True,
+        blank=True,
+        validators=[
+            MinLengthValidator(CONFIG_SIZE["acq"]),
+        ],
     )
     asic0 = models.BinaryField(
-        max_length=CONFIG_SIZE["asic0"], null=True, blank=True, validators=[MinLengthValidator(CONFIG_SIZE["asic0"])]
+        max_length=CONFIG_SIZE["asic0"],
+        null=True,
+        blank=True,
+        validators=[
+            MinLengthValidator(CONFIG_SIZE["asic0"]),
+        ],
     )
     asic1 = models.BinaryField(
-        max_length=CONFIG_SIZE["asic1"], null=True, blank=True, validators=[MinLengthValidator(CONFIG_SIZE["asic1"])]
+        max_length=CONFIG_SIZE["asic1"],
+        null=True,
+        blank=True,
+        validators=[
+            MinLengthValidator(CONFIG_SIZE["asic1"]),
+        ],
     )
     bee = models.BinaryField(
-        max_length=CONFIG_SIZE["bee"], null=True, blank=True, validators=[MinLengthValidator(CONFIG_SIZE["bee"])]
+        max_length=CONFIG_SIZE["bee"],
+        null=True,
+        blank=True,
+        validators=[
+            MinLengthValidator(CONFIG_SIZE["bee"]),
+        ],
     )
     liktrg = models.BinaryField(
-        max_length=CONFIG_SIZE["liktrg"], null=True, blank=True, validators=[MinLengthValidator(CONFIG_SIZE["liktrg"])]
+        max_length=CONFIG_SIZE["liktrg"],
+        null=True,
+        blank=True,
+        validators=[
+            MinLengthValidator(CONFIG_SIZE["liktrg"]),
+        ],
     )
     obs = models.BinaryField(
-        max_length=CONFIG_SIZE["obs"], null=True, blank=True, validators=[MinLengthValidator(CONFIG_SIZE["obs"])]
+        max_length=CONFIG_SIZE["obs"],
+        null=True,
+        blank=True,
+        validators=[
+            MinLengthValidator(CONFIG_SIZE["obs"]),
+        ],
     )
 
     class Meta:
