@@ -4,3 +4,11 @@
   animation: spin 1s linear infinite;
   display: inline-block;
 }
+
+.animate-pulse {
+  animation: pulse 1s infinite;
+}
+
+.ping {
+  animation: ping 1s infinite;
+}

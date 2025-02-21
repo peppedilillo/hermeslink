@@ -2,7 +2,6 @@
 {% block content %}
 
 <h1 class="font-bold text-4xl mb-8">{{ header }}</h1>
-
 {% if page_obj %}
     <div class="space-y-6">
         {% for config in page_obj %}
@@ -26,9 +25,9 @@
                         <p>{{ config.deliver_time|date:"Y-m-d H:i"|default:"Not delivered" }}</p>
                     </div>
                     <div class="col-span-4">
-                        <span class="text-gray-400 text-sm">Uploaded</span>
+                        <span class="text-gray-400 text-sm">Uplinked</span>
                         {% if not config.uploaded %}
-                            <p>Not uploaded</p>
+                            <p> Not yet </p>
                         {% else %}
                             <p class="text-green-400 font-bold">{{ config.upload_time|date:"Y-m-d H:i"}}</p>
                         {% endif %}
@@ -41,7 +40,7 @@
                         {% if not config.uploaded %}
                             <i class="bi bi-clock mr-2"></i>
                             <a href="{% url 'configs:commit' config.id %}" class="text-blue-400 hover:text-orange-500 duration-300">
-                                Commit upload time
+                                Commit uplink time
                             </a>
                         {% endif %}
                     </div>

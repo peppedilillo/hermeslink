@@ -262,7 +262,7 @@ history = partial(
 )
 pending = partial(
     _index,
-    header="Commit",
+    header="Pending",
     filter_by={"uploaded": False},
     order_by=("-date",),
     empty_message="No pending configuration.",

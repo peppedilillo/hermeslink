@@ -50,9 +50,9 @@
                   {% if request.session.test_status == 0 %}
                     <i class="bi bi-circle-fill text-green-500 text-[10px] absolute -top-2 -right-2"></i>
                   {% elif request.session.test_status == 1 %}
-                    <i class="bi bi-circle-fill text-yellow-500 text-[10px] absolute -top-2 -right-2"></i>
+                    <i class="bi bi-circle-fill text-yellow-500 text-[10px] absolute -top-2 -right-2 animate-pulse"></i>
                   {% elif request.session.test_status == 2 %}
-                    <i class="bi bi-circle-fill text-red-500 text-[10px] absolute -top-2 -right-2"></i>
+                    <i class="bi bi-circle-fill text-red-500 text-[10px] absolute -top-2 -right-2 animate-pulse"></i>
                   {% endif %}
                 </div>
                 <span class="ml-3">Test</span>
@@ -67,7 +67,7 @@
             <li>
               <a href="{% url 'configs:pending' %}" class="flex items-center p-2 hover:bg-gray-900">
                 <i class="bi bi-rocket-takeoff"></i>
-                <span class="ml-3">Commit</span>
+                <span class="ml-3">Pending</span>
               </a>
             </li>
             <li>

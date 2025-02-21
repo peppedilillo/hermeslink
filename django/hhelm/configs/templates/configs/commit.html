@@ -1,8 +1,27 @@
 {% extends 'base.html' %}
 {% load configs_extras %}
 {% block content %}
+    
+    
+<h2 class="font-bold text-4xl mb-6">Commit uplink time</h2>
+    <form method="post" class="w-full">
+      {% csrf_token %}
+      <div class="my-6">
+        <div class="mb-4">Enter the UTC uplink time for this configuration. The Science Operations Center (SOC) will use this timestamp to properly calibrate scientific data.</div>
+        <div class="space-y-2">
+          <div class="flex flex-col">
+            <div class="flex-1 max-w-full">
+              {{ form.upload_time | addclass:"w-full bg-black text-white p-2 border border-white" }}
+            </div>
+            {% if form.upload_time.errors %}
+              <div class="text-red-500 text-sm mt-4">{{ form.upload_time.errors }}</div>
+            {% endif %}
+            <div class="text-gray-400 text-xs mt-4">{{ form.upload_time.help_text }}</div>
+          </div>
+        </div>
+      </div>
 
-<h2 class="font-bold text-4xl mb-6">Commit upload time</h2>
+    <label class="block font-medium my-6 text-xl">Configuration details:</label>
     <div class="bg-gray-900 p-6 rounded mb-8">
       <div class="grid grid-cols-12 gap-4 mb-6">
         <div class="col-span-1">
@@ -39,25 +58,7 @@
         </p>
       </div>
     </div>
-
-    <form method="post" class="w-full">
-      {% csrf_token %}
-      <div class="mb-6">
-        <label class="block font-medium mb-2 text-xl">Upload Time:</label>
-        <div class="mb-4">Use the next form to commit an upload time for this configuration.</div>
-        <div class="space-y-2">
-          <div class="flex flex-col">
-            <div class="flex-1 max-w-[28rem]">
-              {{ form.upload_time | addclass:"w-full bg-black text-white p-2 border border-white" }}
-            </div>
-            {% if form.upload_time.errors %}
-              <div class="text-red-500 text-sm mt-4">{{ form.upload_time.errors }}</div>
-            {% endif %}
-            <div class="text-gray-400 text-xs mt-4">{{ form.upload_time.help_text }}</div>
-          </div>
-        </div>
-      </div>
-
+    
       <div class="flex justify-between items-center mt-8">
         <a href="{% url 'configs:history' %}" class="text-gray-400 hover:text-white transition-colors duration-200">
           <i class="bi bi-arrow-left mr-2"></i>Back to history

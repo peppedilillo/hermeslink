@@ -104,10 +104,8 @@ class DeliverConfiguration(forms.Form):
 
 class CommitConfiguration(forms.ModelForm):
     upload_time = forms.DateTimeField(
-        input_formats=["%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S"],
         required=True,
-        help_text="A string formatted as `{YYYY}-{MM}-{DD}T{HH}:{MM}:{SS}Z` or `{YYYY}-{MM}-{DD}T{HH}:{MM}:{SS}`.\n "
-        "The 'Z' stands for 'Zero timezone'. If the strings ends with `Z`, UTC timezone is assumed. Otherwise timezone is automatically set to 'Europe/Rome'.\n",
+        help_text="A UTC timestamp string formatted as `{YYYY}-{MM}-{DD}T{HH}:{MM}:{SS}Z`.",
     )
 
     class Meta:
@@ -117,12 +115,11 @@ class CommitConfiguration(forms.ModelForm):
     def clean_upload_time(self):
         # we only accept patterns like "2024-12-22T12:12:12" or "2024-12-22T12:12:12Z"
         format_patterns = [
-            r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z?$",
-            r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z?",
+            r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$",
         ]
         valid_format = any(re.match(pattern, self.data.get("upload_time")) for pattern in format_patterns)
         if not valid_format:
-            raise forms.ValidationError("Time must be in format YYYY-MM-DDThh:mm:ssZ or YYYY-MM-DDThh:mm:ss")
+            raise forms.ValidationError("UTC timestamp must be in format 'YYYY-MM-DDThh:mm:ssZ'. Mind the 'Z'!")
 
         # upload_time should follow creation date and deliver time.
         upload_time = self.cleaned_data.get("upload_time")

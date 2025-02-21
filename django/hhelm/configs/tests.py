@@ -1123,12 +1123,12 @@ class CommitViewTest(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.url.startswith("/accounts/login/"))
 
-    def test_commit_view_post_success(self):
+    def test_commit_view_post_success_fmt(self):
         """Test successful commit with valid upload time"""
-        upload_time = timezone.now()
+        upload_time = timezone.now() - timezone.timedelta(hours=12)
         response = self.client.post(
             reverse("configs:commit", args=[self.config.id]),
-            {"upload_time": upload_time.strftime("%Y-%m-%dT%H:%M:%S")},
+            {"upload_time": upload_time.strftime("%Y-%m-%dT%H:%M:%SZ")},
             follow=True,
         )
 
@@ -1142,13 +1142,22 @@ class CommitViewTest(TestCase):
 
     def test_commit_view_invalid_time_format(self):
         """Test commit with invalid time format"""
-        response = self.client.post(
-            reverse("configs:commit", args=[self.config.id]),
-            {"upload_time": "invalid-time-format"},
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(self.config.uploaded)
-        self.assertIsNone(self.config.upload_time)
+        for invalid_time_format in [
+            "invalid_string",
+            (timezone.now() - timezone.timedelta(hours=12)).strftime("%Y-%m-%dT%H:%M:%S"),
+            (timezone.now() - timezone.timedelta(hours=12)).strftime("%Y-%m-%dT%H:%M:%S[Europe/Rome]"),
+            (timezone.now() - timezone.timedelta(hours=12)).strftime("%Y-%m-%dT%H:%M"),
+            (timezone.now() - timezone.timedelta(hours=12)).strftime("%Y-%m-%dT%H:%MZ"),
+            (timezone.now() - timezone.timedelta(hours=12)).strftime("%Y-%m-%dZ"),
+            (timezone.now() - timezone.timedelta(hours=12)).strftime("%Y-%m-%d %H:%MZ"),
+        ]:
+            response = self.client.post(
+                reverse("configs:commit", args=[self.config.id]),
+                {"upload_time": invalid_time_format},
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertFalse(self.config.uploaded)
+            self.assertIsNone(self.config.upload_time)
 
     def test_commit_view_time_before_deliver(self):
         """Test commit with upload time before deliver time"""
