@@ -2,7 +2,7 @@
 {% load configs_extras %}
 {% block content %}
 <h2 class="font-bold text-4xl pb-6">Submit Configuration</h2>
-<form method="post" class="w-100">
+<form method="post" class="w-100" id="submitForm">
     {% csrf_token %}
     <div class="space-y-2">
         <div class="flex">
@@ -19,14 +19,38 @@
         </div>
     </div>
 
-
     <div class="flex justify-between items-center mt-6">
         <a href="{% url 'configs:test' %}" class="text-gray-400 hover:text-white transition-colors duration-200">
           <i class="bi bi-arrow-left mr-2"></i>Back to tests
         </a>
-        <button type="submit" class="text-2xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
+        <button type="submit" id="submitButton" class="text-2xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
           Submit <i class="bi bi-send ml-2"></i>
         </button>
+        <div id="loadingIndicator" class="hidden">
+          <span class="text-2xl">
+            <i class="bi bi-arrow-repeat loading-spin mr-2"></i>Submitting...
+          </span>
+        </div>
     </div>
 </form>
+
+<script>
+
+function wait(time) {
+    return new Promise(resolve => {
+        setTimeout(resolve, time);
+    });
+}
+
+document.getElementById('submitForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    if (confirm('Do you really want to submit?')) {
+        document.getElementById('submitButton').classList.add('hidden');
+        document.getElementById('loadingIndicator').classList.remove('hidden');
+        await wait(500);
+        this.submit();
+    }
+});
+</script>
 {% endblock %}

@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+.loading-spin {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
