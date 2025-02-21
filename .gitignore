@@ -182,3 +182,7 @@ cython_debug/
 django/dev/
 **/repomix-output.txt
 **/tailwind*
+.django.env
+.django.env.prod
+.grafana.env
+.influxdb.env
