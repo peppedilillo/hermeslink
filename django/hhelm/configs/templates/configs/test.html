@@ -16,18 +16,15 @@
     
 <h1 class="font-bold text-2xl mb-6">Test report:</h1>
     <div class="text-mono text-sm p-4 bg-gray-900"><pre>{{ results | safe }}</pre></div>
-    
-    {% if request.session.test_status != 2 %}
-        <div class="flex justify-end mt-6">
-            <a href="{% url 'configs:deliver' %}" class="text-4xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
-                <i class="bi bi-arrow-right"></i>
-            </button>
-        </div>
-    {% else %}
-        <div class="flex justify-end mt-6">
-            <a href="{% url 'configs:upload' %}" class="text-4xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
-                <i class="bi bi-arrow-left"></i>
-            </button>
-        </div>
-    {%  endif %}
+
+    <div class="flex justify-between items-center mt-8">
+        <a href="{% url 'configs:upload' %}" class="text-gray-400 hover:text-white transition-colors duration-200">
+          <i class="bi bi-arrow-left mr-2"></i>Back to upload
+        </a>
+        {% if request.session.test_status != 2 %}
+            <a href="{% url 'configs:deliver' %}" class="text-2xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
+                Submit <i class="bi bi-arrow-right"></i>
+            </a>
+        {%  endif %}
+    </div>
 {% endblock %}
