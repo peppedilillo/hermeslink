@@ -137,7 +137,7 @@ class HashError(Exception):
 
 
 @login_required
-def deliver(request: HttpRequest) -> HttpResponse:
+def submit(request: HttpRequest) -> HttpResponse:
     """
     This view asks user to submit the configuration to the recipient, as defined
     in `settings.EMAIL_CONFIGS_RECIPIENT`. On POST, it sends the email, then records
@@ -159,15 +159,15 @@ def deliver(request: HttpRequest) -> HttpResponse:
         email.send()
 
     def create_and_check_configuration():
-        """Record delivered configuration to db."""
+        """Record submitted configuration to db."""
         config_data = decode_config_data(request.session["config_data"])
 
         config_entry = models.Configuration(
             author=request.user,
-            delivered=False,
-            deliver_time=None,
-            uploaded=False,
-            upload_time=None,
+            submitted=False,
+            submit_time=None,
+            uplinked=False,
+            uplink_time=None,
             model=request.session["config_model"],
         )
         for ftype, content in config_data.items():
@@ -183,8 +183,8 @@ def deliver(request: HttpRequest) -> HttpResponse:
 
     def commit_configuration(config_entry: models.Configuration):
         """Commit configuration to db"""
-        config_entry.delivered = True
-        config_entry.deliver_time = timezone.now()
+        config_entry.submitted = True
+        config_entry.submit_time = timezone.now()
         config_entry.save()
 
     def cleanup():
@@ -199,7 +199,7 @@ def deliver(request: HttpRequest) -> HttpResponse:
         return redirect("configs:test")
 
     if request.method == "POST":
-        form = forms.DeliverConfiguration(request.POST)
+        form = forms.SubmitConfiguration(request.POST)
         if form.is_valid():
             try:
                 with transaction.atomic():
@@ -210,19 +210,19 @@ def deliver(request: HttpRequest) -> HttpResponse:
 
             except HashError as e:
                 print(f"Integrity error: {str(e)}")
-                return render(request, "configs/deliver_error.html", {"error": "Compromised input integrity."})
+                return render(request, "configs/submit_error.html", {"error": "Compromised input integrity."})
             except SMTPException as e:
-                print(f"Email delivery failed: {str(e)}")
-                return render(request, "configs/deliver_error.html", {"error": "Failed to send email"})
+                print(f"Email submit failed: {str(e)}")
+                return render(request, "configs/submit_error.html", {"error": "Failed to send email"})
             except Exception as e:
-                print(f"Unexpected error during delivery: {str(e)}")
-                return render(request, "configs/deliver_error.html", {"error": "An unexpected error occurred"})
-            return render(request, "configs/deliver_success.html", {})
+                print(f"Unexpected error submitting email: {str(e)}")
+                return render(request, "configs/submit_error.html", {"error": "An unexpected error occurred"})
+            return render(request, "configs/submit_success.html", {})
 
-    form = forms.DeliverConfiguration()
+    form = forms.SubmitConfiguration()
     return render(
         request,
-        "configs/deliver.html",
+        "configs/submit.html",
         {"form": form},
     )
 
@@ -258,12 +258,12 @@ history = partial(
     header="History",
     filter_by={},
     order_by=("-date",),
-    empty_message="No configuration has been uploaded yet.",
+    empty_message="No configuration has been uplinked yet.",
 )
 pending = partial(
     _index,
     header="Pending",
-    filter_by={"uploaded": False},
+    filter_by={"uplinked": False},
     order_by=("-date",),
     empty_message="No pending configuration.",
 )
@@ -299,14 +299,14 @@ def commit(request, config_id: int):
     except Configuration.DoesNotExist:
         return HttpResponse("404: Configuration not found", status=404)
 
-    if config.uploaded:
+    if config.uplinked:
         return HttpResponse("403: Configuration has already been committed", status=403)
 
     if request.method == "POST":
         form = CommitConfiguration(request.POST, instance=config)
         if form.is_valid():
-            config.uploaded = True
-            config.upload_time = form.cleaned_data["upload_time"]
+            config.uplinked = True
+            config.uplink_time = form.cleaned_data["uplink_time"]
             form.save()
             return redirect("configs:history")
     else:

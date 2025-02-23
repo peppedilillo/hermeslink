@@ -19,7 +19,7 @@ def check_length(
     ftype: Literal[*CONFIG_TYPES],
 ):
     """
-    Checks length of an uploaded file to match the exepcted value for its type.
+    Checks length of an uploaded file to match the expected value for its type.
     """
     if file.size != CONFIG_SIZE[ftype]:
         raise forms.ValidationError(
@@ -70,7 +70,7 @@ class UploadConfiguration(forms.Form):
         return cleaned_data
 
 
-class DeliverConfiguration(forms.Form):
+class SubmitConfiguration(forms.Form):
     """
     A form for mailing a configuration.
     """
@@ -103,30 +103,30 @@ class DeliverConfiguration(forms.Form):
 
 
 class CommitConfiguration(forms.ModelForm):
-    upload_time = forms.DateTimeField(
+    uplink_time = forms.DateTimeField(
         required=True,
         help_text="A UTC timestamp string formatted as `{YYYY}-{MM}-{DD}T{HH}:{MM}:{SS}Z`.",
     )
 
     class Meta:
         model = Configuration
-        fields = ["upload_time"]
+        fields = ["uplink_time"]
 
-    def clean_upload_time(self):
+    def clean_uplink_time(self):
         # we only accept patterns like "2024-12-22T12:12:12" or "2024-12-22T12:12:12Z"
         format_patterns = [
             r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$",
         ]
-        valid_format = any(re.match(pattern, self.data.get("upload_time")) for pattern in format_patterns)
+        valid_format = any(re.match(pattern, self.data.get("uplink_time")) for pattern in format_patterns)
         if not valid_format:
             raise forms.ValidationError("UTC timestamp must be in format 'YYYY-MM-DDThh:mm:ssZ'. Mind the 'Z'!")
 
-        # upload_time should follow creation date and deliver time.
-        upload_time = self.cleaned_data.get("upload_time")
-        if upload_time < self.instance.deliver_time or upload_time < self.instance.date:
+        # uplink_time should follow creation date and submit time.
+        uplink_time = self.cleaned_data.get("uplink_time")
+        if uplink_time < self.instance.submit_time or uplink_time < self.instance.date:
             raise ValidationError(
-                "The upload time is the time when a configuration is uplinked to a spacecraft.\n"
+                "The uplink time is the time when a configuration is transmitted to a spacecraft.\n"
                 "It should always come after the time in which a configuration is created, "
                 "and the time in which the configuration is submitted to the MOC."
             )
-        return upload_time
+        return uplink_time

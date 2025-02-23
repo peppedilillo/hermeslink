@@ -27,9 +27,9 @@ def validate_not_future(value):
 class Configuration(models.Model):
     """
     Core configuration model. Stores configurations as binary blobs, as well as
-    a few metadata informations, including authors, creation date, delivery status.
-    The upload field is inteded to be modified later, once we get a confirmation
-    on the uploaded status, which should supposedly come with a timestamp (`upload_time`)
+    a few metadata informations, including authors, creation date, submit status.
+    The uplink field is inteded to be modified later, once we get a confirmation
+    on the uplinked status, which should supposedly come with a timestamp (`uplink_time`)
     """
 
     MODELS = tuple(zip(SPACECRAFTS_NAMES, SPACECRAFTS_NAMES))
@@ -43,19 +43,19 @@ class Configuration(models.Model):
         on_delete=models.PROTECT,
     )
     # this field is for when a configuration is first sent to the MOC
-    delivered = models.BooleanField(
+    submitted = models.BooleanField(
         default=False,
     )
-    deliver_time = models.DateTimeField(
+    submit_time = models.DateTimeField(
         null=True,
         blank=True,
         validators=[validate_not_future],
     )
-    # this field is for when a configuration is upload on-board by the MOC
-    uploaded = models.BooleanField(
+    # this field is for when a configuration is uplink on-board by the MOC
+    uplinked = models.BooleanField(
         default=False,
     )
-    upload_time = models.DateTimeField(
+    uplink_time = models.DateTimeField(
         null=True,
         blank=True,
         validators=[validate_not_future],
@@ -138,35 +138,35 @@ class Configuration(models.Model):
                 ),
                 name="at_least_one_config_field",
             ),
-            # CONSTRAINT 2: upload_time must be later than upload_time if both exist
+            # CONSTRAINT 2: uplink_time must be later than uplink_time if both exist
             CheckConstraint(
-                check=Q(deliver_time__isnull=True) | Q(upload_time__isnull=True) | Q(upload_time__gt=F("deliver_time")),
-                name="upload_after_deliver",
+                check=Q(submit_time__isnull=True) | Q(uplink_time__isnull=True) | Q(uplink_time__gt=F("submit_time")),
+                name="uplink_after_submit",
             ),
-            # we can imagine edge scenarios in which the `delivered` or `uploaded` flags are set but
+            # we can imagine edge scenarios in which the `submitted` or `uplinked` flags are set but
             # their respective time is not. for example, when the datetime is uncertain or if an error
             # occurred with the user timestamping system. on the other hand, a scenario in which
             # the times are known but the flags aren't set should never happen.
-            # CONSTRAINT 3: deliver time can't have a value if delivered isn't set
+            # CONSTRAINT 3: submit time can't have a value if submitted isn't set
             CheckConstraint(
                 #   equivalent expression:
-                #   check=(Q(deliver_time__isnull=False) & Q(delivered=True)) | Q(deliver_time__isnull=True),
-                check=Q(deliver_time__isnull=True) | Q(delivered=True),
-                name="deliver_time_requires_delivered",
+                #   check=(Q(submit_time__isnull=False) & Q(submitted=True)) | Q(submit_time__isnull=True),
+                check=Q(submit_time__isnull=True) | Q(submitted=True),
+                name="submit_time_requires_submitted",
             ),
-            # CONSTRAINT 4: upload time can't have a value if uploeaded isn't set
+            # CONSTRAINT 4: uplink time can't have a value if uploeaded isn't set
             CheckConstraint(
                 #   equivalent expression:
-                #   check=(Q(upload_time__isnull=False) & Q(uploaded=True)) | Q(upload_time__isnull=True),
-                check=Q(upload_time__isnull=True) | Q(uploaded=True),
-                name="upload_time_requires_uploaded",
+                #   check=(Q(uplink_time__isnull=False) & Q(uplinked=True)) | Q(uplink_time__isnull=True),
+                check=Q(uplink_time__isnull=True) | Q(uplinked=True),
+                name="uplink_time_requires_uplinked",
             ),
-            # CONSTRAINT 5: uploaded can't be true if delivered isn't too
+            # CONSTRAINT 5: uplinked can't be true if submitted isn't too
             CheckConstraint(
                 #   equivalent expression:
-                #   check=Q(delivered=True) | (Q(delivered=False) & Q(uploaded=False)),
-                check=Q(delivered=True) | Q(uploaded=False),
-                name="uploaded_requires_delivered",
+                #   check=Q(submitted=True) | (Q(submitted=False) & Q(uplinked=False)),
+                check=Q(submitted=True) | Q(uplinked=False),
+                name="uplinked_requires_submitted",
             ),
         ]
 

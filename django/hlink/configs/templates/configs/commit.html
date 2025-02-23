@@ -11,12 +11,12 @@
         <div class="space-y-2">
           <div class="flex flex-col">
             <div class="flex-1 max-w-full">
-              {{ form.upload_time | addclass:"w-full bg-black text-white p-2 border border-white" }}
+              {{ form.uplink_time | addclass:"w-full bg-black text-white p-2 border border-white" }}
             </div>
-            {% if form.upload_time.errors %}
-              <div class="text-red-500 text-sm mt-4">{{ form.upload_time.errors }}</div>
+            {% if form.uplink_time.errors %}
+              <div class="text-red-500 text-sm mt-4">{{ form.uplink_time.errors }}</div>
             {% endif %}
-            <div class="text-gray-400 text-xs mt-4">{{ form.upload_time.help_text }}</div>
+            <div class="text-gray-400 text-xs mt-4">{{ form.uplink_time.help_text }}</div>
           </div>
         </div>
       </div>
@@ -44,10 +44,10 @@
 
       <div class="border-t border-gray-700 pt-4 mb-6">
         <span class="text-gray-400 text-sm"><i class="bi bi-clipboard2-check mr-1"></i>Status</span>
-        {% if config.delivered %}
-          <p>Configuration was delivered on <span class="text-blue-400">{{ config.deliver_time|date:"Y-m-d H:i" }}</span></p>
+        {% if config.submitted %}
+          <p>Configuration was submitted on <span class="text-blue-400">{{ config.submit_time|date:"Y-m-d H:i" }}</span></p>
         {% else %}
-          <p class="text-yellow-500">Configuration has not been delivered yet</p>
+          <p class="text-yellow-500">Configuration has not been submitted yet</p>
         {% endif %}
       </div>
       <div class="border-t border-gray-700 pt-4">

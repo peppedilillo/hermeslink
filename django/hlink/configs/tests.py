@@ -9,8 +9,8 @@ MODEL TESTS:
 * Test that at least one configuration file must be provided
 * Test that configurations are protected from author deletion via foreign key constraints
 * Test that creation timestamp is automatically assigned
-* Test that delivery and upload flags default to False with null timestamps
-* Test that delivery and upload timestamps can be properly set and retrieved
+* Test that submitted and uplinked flags default to False with null timestamps
+* Test that submit and uplink timestamps can be properly set and retrieved
 * Test that partial configurations can be created and stored
 
 FORM TESTS:
@@ -20,7 +20,7 @@ FORM TESTS:
   - Single file provided
   - Partial file sets provided
 * Test satellite model selection validation
-* Test email delivery form validation including CC field formatting
+* Test email submit form validation including CC field formatting
 
 CONFIGURATION VIEWS TESTS:
 * Test authentication requirements for all views
@@ -39,15 +39,15 @@ CONFIGURATION VIEWS TESTS:
   - Mismatched ASIC configurations
   - Wrong ASIC0/ASIC1 configurations
 * Test file content preservation throughout the process
-* Test session cleanup after delivery
+* Test session cleanup after submit
 * Test session expiration at logout
 
-EMAIL DELIVERY TESTS:
-* Test successful email delivery with correct attachments
+EMAIL SUBMIT TESTS:
+* Test successful email submit with correct attachments
 * Test email content verification
 * Test CC field handling
 * Test failure handling and rollback
-* Test partial configuration delivery:
+* Test partial configuration submit:
   - Correct archive contents
   - Database record accuracy
   - Email attachment verification
@@ -66,10 +66,8 @@ DOWNLOAD VIEW TEST
 
 from io import BytesIO
 from pathlib import Path
-import shutil
 from smtplib import SMTPException
 import tarfile
-import tempfile
 from unittest.mock import patch
 import zipfile
 
@@ -91,7 +89,7 @@ from hlink.settings import BASE_DIR
 from hlink.settings import EMAIL_CONFIGS_RECIPIENT
 
 from .forms import CommitConfiguration
-from .forms import DeliverConfiguration
+from .forms import SubmitConfiguration
 from .forms import UploadConfiguration
 from .models import Configuration
 from .validators import Status
@@ -197,26 +195,26 @@ class ConfigurationModelTest(TestCase):
         self.assertTrue(isinstance(self.valid_config.date, timezone.datetime))
 
     def test_default_flags(self):
-        """Test that delivered and uploaded flags default to False"""
-        self.assertFalse(self.valid_config.delivered)
-        self.assertFalse(self.valid_config.uploaded)
-        self.assertIsNone(self.valid_config.upload_time)
-        self.assertIsNone(self.valid_config.deliver_time)
+        """Test that submit and uplinked flags default to False"""
+        self.assertFalse(self.valid_config.submitted)
+        self.assertFalse(self.valid_config.uplinked)
+        self.assertIsNone(self.valid_config.uplink_time)
+        self.assertIsNone(self.valid_config.submit_time)
 
     def test_time_assignment(self):
-        """Test upload_time field assignment"""
-        upload_time = timezone.now()
-        deliver_time = upload_time - timezone.timedelta(hours=1)
+        """Test uplink_time field assignment"""
+        uplink_time = timezone.now()
+        submit_time = uplink_time - timezone.timedelta(hours=1)
 
-        self.valid_config.deliver_time = deliver_time
-        self.valid_config.delivered = True
-        self.valid_config.upload_time = upload_time
-        self.valid_config.uploaded = True
+        self.valid_config.submit_time = submit_time
+        self.valid_config.submitted = True
+        self.valid_config.uplink_time = uplink_time
+        self.valid_config.uplinked = True
         self.valid_config.save()
 
         self.valid_config.refresh_from_db()
-        self.assertEqual(self.valid_config.upload_time, upload_time)
-        self.assertEqual(self.valid_config.deliver_time, deliver_time)
+        self.assertEqual(self.valid_config.uplink_time, uplink_time)
+        self.assertEqual(self.valid_config.submit_time, submit_time)
 
     def test_configuration_creation_with_partial_data(self):
         """Test that a configuration can be created with only some config files"""
@@ -237,96 +235,96 @@ class ConfigurationModelTest(TestCase):
             )
             config.full_clean()
 
-    def test_deliver_time_requires_delivered_flag(self):
-        """Test that a configuration with non-null deliver_time must have delivered=True"""
+    def test_submit_time_requires_submitted_flag(self):
+        """Test that a configuration with non-null submit_time must have submitted=True"""
         config = Configuration(
             author=self.test_user,
             model="H1",
             acq=b"x" * self.valid_len_acq_data,
-            deliver_time=timezone.now(),
-            delivered=False,  # This violates the constraint
+            submit_time=timezone.now(),
+            submitted=False,  # This violates the constraint
         )
         with self.assertRaises(ValidationError):
             config.full_clean()
 
         # Fix the constraint violation
-        config.delivered = True
+        config.submitted = True
         config.full_clean()  # Should not raise an exception
 
-    def test_upload_time_requires_uploaded_flag(self):
-        """Test that a configuration with non-null upload_time must have uploaded=True"""
+    def test_uplink_time_requires_uplinked_flag(self):
+        """Test that a configuration with non-null uplink_time must have uplinked=True"""
         config = Configuration(
             author=self.test_user,
             model="H1",
             acq=b"x" * self.valid_len_acq_data,
-            upload_time=timezone.now(),
-            uploaded=False,  # This violates the constraint
+            uplink_time=timezone.now(),
+            uplinked=False,  # This violates the constraint
         )
         with self.assertRaises(ValidationError):
             config.full_clean()
 
         # Fix the constraint violation
-        config.delivered = True
-        config.uploaded = True
+        config.submitted = True
+        config.uplinked = True
         config.full_clean()  # Should not raise an exception
 
-    def test_uploaded_implies_delivered(self):
+    def test_uplinked_implies_submitted(self):
         config = Configuration(
             author=self.test_user,
             model="H1",
             acq=b"x" * self.valid_len_acq_data,
-            upload_time=None,
-            uploaded=False,
-            delivered=True,
-            deliver_time=timezone.now(),
+            uplink_time=None,
+            uplinked=False,
+            submitted=True,
+            submit_time=timezone.now(),
         )
         config.full_clean()
 
-    def test_upload_time_after_deliver_time(self):
-        """Test that upload_time must be later than deliver_time if both exist"""
+    def test_uplink_time_after_submit_time(self):
+        """Test that uplink_time must be later than submit_time if both exist"""
         test_time = timezone.now()
 
-        # Case 1: deliver_time is earlier than upload_time
+        # Case 1: submit_time is earlier than uplink_time
         config = Configuration(
             author=self.test_user,
             model="H1",
             acq=b"x" * self.valid_len_acq_data,
-            deliver_time=test_time,
-            delivered=True,
-            upload_time=test_time + timezone.timedelta(hours=1),
-            uploaded=True,
+            submit_time=test_time,
+            submitted=True,
+            uplink_time=test_time + timezone.timedelta(hours=1),
+            uplinked=True,
         )
         with self.assertRaises(ValidationError):
             config.full_clean()
 
-        # Case 2: deliver_time equals upload_time
-        config.deliver_time = test_time
-        config.upload_time = test_time
+        # Case 2: submit_time equals uplink_time
+        config.submit_time = test_time
+        config.uplink_time = test_time
         with self.assertRaises(ValidationError):
             config.full_clean()
 
-        # Case 3: deliver_time is later than upload_time (valid)
-        config.deliver_time = test_time
-        config.upload_time = test_time - timezone.timedelta(hours=2)
+        # Case 3: submit_time is later than uplink_time (valid)
+        config.submit_time = test_time
+        config.uplink_time = test_time - timezone.timedelta(hours=2)
         with self.assertRaises(ValidationError):
             config.full_clean()
 
         # note for the next test the flags are still set
-        self.assertTrue(config.uploaded)
-        self.assertTrue(config.delivered)
+        self.assertTrue(config.uplinked)
+        self.assertTrue(config.submitted)
 
-        # Case 4: Only deliver_time is set (valid)
-        config.upload_time = None
+        # Case 4: Only submit_time is set (valid)
+        config.uplink_time = None
         config.full_clean()  # Should not raise an exception
 
-        # Case 5: Only upload_time is set (valid)
-        config.deliver_time = None
-        config.upload_time = test_time
+        # Case 5: Only uplink_time is set (valid)
+        config.submit_time = None
+        config.uplink_time = test_time
         config.full_clean()  # Should not raise an exception
 
         # Case 6: Neither time is set (valid)
-        config.deliver_time = None
-        config.upload_time = None
+        config.submit_time = None
+        config.uplink_time = None
         config.full_clean()  # Should not raise an exception
 
 
@@ -397,13 +395,13 @@ class ConfigurationFormTest(TestCase):
             self.assertFalse(form.is_valid())
             self.assertIn("model", form.errors)
 
-    def test_deliver_form_valid_data(self):
-        """Test that delivery form accepts valid data"""
+    def test_submit_form_valid_data(self):
+        """Test that submit form accepts valid data"""
         form_data = {"subject": "Test Subject", "recipient": "test@example.com", "cc": "cc@example.com"}
-        form = DeliverConfiguration(data=form_data)
+        form = SubmitConfiguration(data=form_data)
         self.assertTrue(form.is_valid())
 
-    def test_deliver_form_cc_validation(self):
+    def test_submit_form_cc_validation(self):
         """Test CC field validation with various formats"""
         valid_cc_formats = [
             "test@example.com",
@@ -421,29 +419,29 @@ class ConfigurationFormTest(TestCase):
 
         for cc in valid_cc_formats:
             form_data = {"subject": "Test Subject", "recipient": "test@example.com", "cc": cc}
-            form = DeliverConfiguration(data=form_data)
+            form = SubmitConfiguration(data=form_data)
             self.assertTrue(form.is_valid(), f"Failed for CC: {cc}")
 
         for cc in invalid_cc_formats:
             form_data = {"subject": "Test Subject", "recipient": "test@example.com", "cc": cc}
-            form = DeliverConfiguration(data=form_data)
+            form = SubmitConfiguration(data=form_data)
             self.assertFalse(form.is_valid(), f"Should have failed for CC: {cc}")
             self.assertIn("cc", form.errors)
 
-    def test_deliver_form_subject_validation(self):
+    def test_submit_form_subject_validation(self):
         """Test subject field validation"""
         # Test empty subject
         form_data = {
             "recipient": "test@example.com",
             "subject": "",
         }
-        form = DeliverConfiguration(data=form_data)
+        form = SubmitConfiguration(data=form_data)
         self.assertFalse(form.is_valid())
         self.assertIn("subject", form.errors)
 
         # Test whitespace-only subject
         form_data["subject"] = "   "
-        form = DeliverConfiguration(data=form_data)
+        form = SubmitConfiguration(data=form_data)
         self.assertFalse(form.is_valid())
         self.assertIn("subject", form.errors)
 
@@ -636,10 +634,6 @@ class ConfigurationViewTest(TestCase):
         # Create a new client for each test
         self.client = Client()
 
-        # Create a temporary directory for uploads
-        self.temp_dir = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, self.temp_dir)
-
     def login(self):
         """Helper method to login test user"""
         self.client.login(username="testuser", password="testpass123")
@@ -655,7 +649,7 @@ class ConfigurationViewTest(TestCase):
         urls = [
             reverse("configs:upload"),
             reverse("configs:test"),
-            reverse("configs:deliver"),
+            reverse("configs:submit"),
         ]
 
         for url in urls:
@@ -787,27 +781,27 @@ class ConfigurationViewTest(TestCase):
         test_result = self.client.session["test_status"]
         self.assertTrue(test_result == Status.WARNING)
 
-    def test_deliver_view_without_session(self):
-        """Test deliver view input validation"""
+    def test_submit_view_without_session(self):
+        """Test submit view input validation"""
         self.login()
-        response = self.client.get(reverse("configs:deliver"))
+        response = self.client.get(reverse("configs:submit"))
         self.assertRedirects(response, reverse("configs:upload"))
 
-    def test_deliver_view_with_valid_session(self):
+    def test_submit_view_with_valid_session(self):
         _ = self.login_and_upload_fileset("H6", self.files_fm6)
         self.client.get(reverse("configs:test"))
-        response = self.client.get(reverse("configs:deliver"))
+        response = self.client.get(reverse("configs:submit"))
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "configs/deliver.html")
+        self.assertTemplateUsed(response, "configs/submit.html")
 
     def test_session_cleanup(self):
-        """Test session cleanup after delivery"""
+        """Test session cleanup after submit"""
         _ = self.login_and_upload_fileset("6", self.files_fm6)
         form_data = {
             "recipient": EMAIL_CONFIGS_RECIPIENT,
             "subject": "Test Subject",
         }
-        _ = self.client.post(reverse("configs:deliver"), data=form_data)
+        _ = self.client.post(reverse("configs:submit"), data=form_data)
 
         self.assertNotIn("config_model", self.client.session)
         self.assertNotIn("config_data", self.client.session)
@@ -854,14 +848,14 @@ class ConfigurationViewTest(TestCase):
         response = self.client.get(reverse("configs:test"))
         self.assertRedirects(response, reverse("configs:upload"))
 
-        response = self.client.get(reverse("configs:deliver"))
+        response = self.client.get(reverse("configs:submit"))
         self.assertRedirects(response, reverse("configs:upload"))
 
-        # uploads good data, then check test and deliver are accessible
+        # uploads good data, then check test and submit are accessible
         _ = self.login_and_upload_fileset("H6", self.files_fm6)
         response = self.client.get(reverse("configs:test"))
         self.assertEqual(response.status_code, 200)
-        response = self.client.get(reverse("configs:deliver"))
+        response = self.client.get(reverse("configs:submit"))
         self.assertEqual(response.status_code, 200)
 
     def test_hex_encoding_preservation(self):
@@ -921,32 +915,32 @@ class ConfigurationEmailTest(TestCase):
         # Clear the test outbox
         mail.outbox = []
 
-    def prepare_delivery_session(self):
-        """Helper to setup a valid delivery session"""
+    def prepare_submit_session(self):
+        """Helper to setup a valid submit session"""
         response = self.client.post(reverse("configs:upload"), data={"model": "H6", **self.files_fm6}, follow=True)
         response = self.client.get(reverse("configs:test"))
         return response
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
-    def test_successful_email_delivery(self):
+    def test_successful_email_submit(self):
         """Test that email is sent successfully with correct content"""
-        self.prepare_delivery_session()
+        self.prepare_submit_session()
 
         form_data = {
             "recipient": settings.EMAIL_CONFIGS_RECIPIENT,
-            "subject": "Test Configuration Delivery",
+            "subject": "Test Configuration",
             "cc": "cc@example.com",
         }
 
-        response = self.client.post(reverse("configs:deliver"), data=form_data)
+        response = self.client.post(reverse("configs:submit"), data=form_data)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "configs/deliver_success.html")
+        self.assertTemplateUsed(response, "configs/submit_success.html")
 
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
 
         # Verify email content
-        self.assertEqual(email.subject, "Test Configuration Delivery")
+        self.assertEqual(email.subject, "Test Configuration")
         self.assertEqual(email.to, [settings.EMAIL_CONFIGS_RECIPIENT])
         self.assertEqual(email.cc, ["cc@example.com"])
 
@@ -959,17 +953,17 @@ class ConfigurationEmailTest(TestCase):
         )
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
-    def test_delivery_with_multiple_cc(self):
-        """Test email delivery with multiple CC recipients"""
-        self.prepare_delivery_session()
+    def test_submit_with_multiple_cc(self):
+        """Test email submit with multiple CC recipients"""
+        self.prepare_submit_session()
 
         form_data = {
             "recipient": settings.EMAIL_CONFIGS_RECIPIENT,
-            "subject": "Test Configuration Delivery",
+            "subject": "Test Configuration",
             "cc": "cc1@example.com; cc2@example.com",
         }
 
-        response = self.client.post(reverse("configs:deliver"), data=form_data)
+        response = self.client.post(reverse("configs:submit"), data=form_data)
         self.assertEqual(response.status_code, 200)
 
         email = mail.outbox[0]
@@ -978,17 +972,17 @@ class ConfigurationEmailTest(TestCase):
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_email_failure_rollback(self):
         """Test that database changes are rolled back if email fails"""
-        self.prepare_delivery_session()
+        self.prepare_submit_session()
 
         form_data = {
             "recipient": settings.EMAIL_CONFIGS_RECIPIENT,
-            "subject": "Test Configuration Delivery",
+            "subject": "Test Configuration",
         }
 
         with patch("django.core.mail.EmailMessage.send", side_effect=SMTPException("SMTP Error")):
-            response = self.client.post(reverse("configs:deliver"), data=form_data)
+            response = self.client.post(reverse("configs:submit"), data=form_data)
 
-            self.assertTemplateUsed(response, "configs/deliver_error.html")
+            self.assertTemplateUsed(response, "configs/submit_error.html")
 
             self.assertEqual(Configuration.objects.count(), 0)
 
@@ -1001,14 +995,14 @@ class ConfigurationEmailTest(TestCase):
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_attachment_content_verification(self):
         """Test that email attachments contain correct file content"""
-        self.prepare_delivery_session()
+        self.prepare_submit_session()
 
         form_data = {
             "recipient": settings.EMAIL_CONFIGS_RECIPIENT,
-            "subject": "Test Configuration Delivery",
+            "subject": "Test Configuration",
         }
 
-        response = self.client.post(reverse("configs:deliver"), data=form_data)
+        response = self.client.post(reverse("configs:submit"), data=form_data)
         email = mail.outbox[0]
         self.assertEqual(len(email.attachments), 1)
         with zipfile.ZipFile(BytesIO(email.attachments[0][1])) as zf:
@@ -1022,22 +1016,22 @@ class ConfigurationEmailTest(TestCase):
                 self.assertEqual(content, original_file)
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
-    def test_delivery_database_record(self):
-        """Test that successful delivery creates correct database record"""
-        self.prepare_delivery_session()
+    def test_submit_database_record(self):
+        """Test that successful submit creates correct database record"""
+        self.prepare_submit_session()
 
         form_data = {
             "recipient": settings.EMAIL_CONFIGS_RECIPIENT,
-            "subject": "Test Configuration Delivery",
+            "subject": "Test Configuration",
         }
 
-        self.client.post(reverse("configs:deliver"), data=form_data)
+        self.client.post(reverse("configs:submit"), data=form_data)
 
         # Verify configuration record
         config = Configuration.objects.last()
         self.assertIsNotNone(config)
-        self.assertTrue(config.delivered)
-        self.assertIsNotNone(config.deliver_time)
+        self.assertTrue(config.submitted)
+        self.assertIsNotNone(config.submit_time)
         self.assertEqual(config.model, "H6")
         self.assertEqual(config.author, self.user)
 
@@ -1048,8 +1042,8 @@ class ConfigurationEmailTest(TestCase):
             self.assertEqual(getattr(config, file_type), original_file.read())
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
-    def test_partial_config_delivery(self):
-        """Test delivery of partial configuration files"""
+    def test_partial_config_submit(self):
+        """Test submit of partial configuration files"""
         partial_files = {"acq": self.files_fm6["acq"], "bee": self.files_fm6["bee"]}
         self.client.post(reverse("configs:upload"), data={"model": "H6", **partial_files}, follow=True)
         self.client.get(reverse("configs:test"))
@@ -1058,7 +1052,7 @@ class ConfigurationEmailTest(TestCase):
             "recipient": settings.EMAIL_CONFIGS_RECIPIENT,
             "subject": "Test Partial Configuration",
         }
-        response = self.client.post(reverse("configs:deliver"), data=form_data)
+        response = self.client.post(reverse("configs:submit"), data=form_data)
 
         # email attachment contains only uploaded files
         email = mail.outbox[0]
@@ -1094,13 +1088,13 @@ class CommitViewTest(TestCase):
         cls.config = Configuration.objects.create(
             author=cls.user,
             model="H1",
-            delivered=True,
-            deliver_time=timezone.now() - timezone.timedelta(days=1),
-            uploaded=False,
+            submitted=True,
+            submit_time=timezone.now() - timezone.timedelta(days=1),
+            uplinked=False,
             **cls.valid_config_data,
         )
-        # work around, otherwise date will be set as per deliver time
-        cls.config.date = cls.config.deliver_time
+        # work around, otherwise date will be set as per submit time
+        cls.config.date = cls.config.submit_time
         cls.config.save()
 
     def setUp(self):
@@ -1123,11 +1117,11 @@ class CommitViewTest(TestCase):
         self.assertTrue(response.url.startswith("/accounts/login/"))
 
     def test_commit_view_post_success_fmt(self):
-        """Test successful commit with valid upload time"""
-        upload_time = timezone.now() - timezone.timedelta(hours=12)
+        """Test successful commit with valid uplink time"""
+        uplink_time = timezone.now() - timezone.timedelta(hours=12)
         response = self.client.post(
             reverse("configs:commit", args=[self.config.id]),
-            {"upload_time": upload_time.strftime("%Y-%m-%dT%H:%M:%SZ")},
+            {"uplink_time": uplink_time.strftime("%Y-%m-%dT%H:%M:%SZ")},
             follow=True,
         )
 
@@ -1136,8 +1130,8 @@ class CommitViewTest(TestCase):
 
         # Refresh config from db and verify changes
         self.config.refresh_from_db()
-        self.assertTrue(self.config.uploaded)
-        self.assertIsNotNone(self.config.upload_time)
+        self.assertTrue(self.config.uplinked)
+        self.assertIsNotNone(self.config.uplink_time)
 
     def test_commit_view_invalid_time_format(self):
         """Test commit with invalid time format"""
@@ -1152,43 +1146,43 @@ class CommitViewTest(TestCase):
         ]:
             response = self.client.post(
                 reverse("configs:commit", args=[self.config.id]),
-                {"upload_time": invalid_time_format},
+                {"uplink_time": invalid_time_format},
             )
             self.assertEqual(response.status_code, 200)
-            self.assertFalse(self.config.uploaded)
-            self.assertIsNone(self.config.upload_time)
+            self.assertFalse(self.config.uplinked)
+            self.assertIsNone(self.config.uplink_time)
 
-    def test_commit_view_time_before_deliver(self):
-        """Test commit with upload time before deliver time"""
-        upload_time = self.config.deliver_time - timezone.timedelta(hours=1)
+    def test_commit_view_time_before_submit(self):
+        """Test commit with uplink time before submit time"""
+        uplink_time = self.config.submit_time - timezone.timedelta(hours=1)
         response = self.client.post(
             reverse("configs:commit", args=[self.config.id]),
-            {"upload_time": upload_time.strftime("%Y-%m-%dT%H:%M:%S")},
+            {"uplink_time": uplink_time.strftime("%Y-%m-%dT%H:%M:%S")},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(self.config.uploaded)
-        self.assertIsNone(self.config.upload_time)
+        self.assertFalse(self.config.uplinked)
+        self.assertIsNone(self.config.uplink_time)
 
     def test_commit_view_time_in_future(self):
-        """Test commit with upload time before deliver time"""
-        upload_time = self.config.deliver_time + timezone.timedelta(hours=1)
+        """Test commit with uplink time before submit time"""
+        uplink_time = self.config.submit_time + timezone.timedelta(hours=1)
         response = self.client.post(
             reverse("configs:commit", args=[self.config.id]),
-            {"upload_time": upload_time.strftime("%Y-%m-%dT%H:%M:%S")},
+            {"uplink_time": uplink_time.strftime("%Y-%m-%dT%H:%M:%S")},
         )
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(self.config.uploaded)
-        self.assertIsNone(self.config.upload_time)
+        self.assertFalse(self.config.uplinked)
+        self.assertIsNone(self.config.uplink_time)
 
     def test_commit_view_nonexistent_config(self):
         """Test accessing commit view with non-existent configuration ID"""
         response = self.client.get(reverse("configs:commit", args=[99999]))
         self.assertEqual(response.status_code, 404)
 
-    def test_commit_view_already_uploaded(self):
-        """Test attempting to commit an already uploaded configuration"""
-        self.config.uploaded = True
-        self.config.upload_time = timezone.now()
+    def test_commit_view_already_uplinked(self):
+        """Test attempting to commit an already uplinked configuration"""
+        self.config.uplinked = True
+        self.config.uplink_time = timezone.now()
         self.config.save()
 
         response = self.client.get(reverse("configs:commit", args=[self.config.id]))
@@ -1210,7 +1204,7 @@ class DownloadViewTest(TestCase):
         }
 
         cls.config = Configuration.objects.create(
-            author=cls.user, model="H1", delivered=True, deliver_time=timezone.now(), **cls.config_data
+            author=cls.user, model="H1", submitted=True, submit_time=timezone.now(), **cls.config_data
         )
 
     def setUp(self):
@@ -1280,25 +1274,25 @@ class IndexViewsTest(TestCase):
         # Create a few simple configurations for testing
         base_time = timezone.now() - timezone.timedelta(days=5)
 
-        # Create one delivered but not uploaded config
-        cls.delivered_config = Configuration.objects.create(
+        # Create one submitted but not uplinked config
+        cls.submitted_config = Configuration.objects.create(
             author=cls.user,
             model="H1",
-            delivered=True,
-            deliver_time=base_time,
-            uploaded=False,
+            submitted=True,
+            submit_time=base_time,
+            uplinked=False,
             acq=b"x" * 20,
             asic0=b"x" * 124,
         )
 
-        # Create one delivered and uploaded config
-        cls.uploaded_config = Configuration.objects.create(
+        # Create one submitted and uplink config
+        cls.uplinked_config = Configuration.objects.create(
             author=cls.user,
             model="H2",
-            delivered=True,
-            deliver_time=base_time - timezone.timedelta(days=1),
-            uploaded=True,
-            upload_time=base_time,
+            submitted=True,
+            submit_time=base_time - timezone.timedelta(days=1),
+            uplinked=True,
+            uplink_time=base_time,
             acq=b"x" * 20,
             asic0=b"x" * 124,
         )
@@ -1317,30 +1311,30 @@ class IndexViewsTest(TestCase):
         self.assertEqual(response.context["page_obj"].paginator.count, 2)
 
     def test_pending_view(self):
-        """Test pending view shows only non-uploaded configurations"""
+        """Test pending view shows only non-uplinked configurations"""
         response = self.client.get(reverse("configs:pending"))
         self.assertEqual(response.status_code, 200)
 
-        # Verify only non-uploaded configs are shown
+        # Verify only non-uplinked configs are shown
         self.assertEqual(response.context["page_obj"].paginator.count, 1)
         if response.context["page_obj"]:
             config = response.context["page_obj"][0]
-            self.assertEqual(config.id, self.delivered_config.id)
-            self.assertFalse(config.uploaded)
+            self.assertEqual(config.id, self.submitted_config.id)
+            self.assertFalse(config.uplinked)
 
     def test_history_view_empty(self):
         """Test history view with no configurations"""
         Configuration.objects.all().delete()
         response = self.client.get(reverse("configs:history"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "No configuration has been uploaded yet.")
+        self.assertContains(response, "No configuration has been uplinked yet.")
 
     def test_pending_view_empty(self):
         """Test pending view with no pending configurations"""
-        # Mark all configs as uploaded
-        self.delivered_config.uploaded = True
-        self.delivered_config.upload_time = timezone.now()
-        self.delivered_config.save()
+        # Mark all configs as uplinked
+        self.submitted_config.uplinked = True
+        self.submitted_config.uplink_time = timezone.now()
+        self.submitted_config.save()
 
         response = self.client.get(reverse("configs:pending"))
         self.assertEqual(response.status_code, 200)

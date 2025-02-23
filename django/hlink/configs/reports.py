@@ -302,15 +302,15 @@ def write_config_readme_txt(config: Configuration) -> str:
         f"$Includes configurations: {', '.join(non_null_configs)}",
         f"$Author: {config.author}",
         f"$Created on: {config.date}",
-        f"$Delivered status: {config.delivered}",
+        f"$Submit status: {config.submitted}",
     ]
 
-    if config.delivered:
-        section_metadata.append(f"$Delivery time: {config.deliver_time}")
+    if config.submitted:
+        section_metadata.append(f"$Submit time: {config.submit_time}")
 
-    section_metadata.append(f"$Upload status: {config.uploaded}")
-    if config.uploaded:
-        section_metadata.append(f"$Upload time: {config.upload_time}")
+    section_metadata.append(f"$Uplink status: {config.uplinked}")
+    if config.uplinked:
+        section_metadata.append(f"$Uplink time: {config.uplink_time}")
     section_metadata.append(f"$SHA256 hash: 0x{sha256sum} ")
 
     test_report = _compose(

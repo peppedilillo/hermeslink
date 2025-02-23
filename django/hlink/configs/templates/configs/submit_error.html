@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="font-bold text-4xl mb-6">Configuration submit failed</h2>
+
+{% if error %}
+    <p>{{ error }}</p>
+{% endif %}
+
+<h3>What happened?</h3>
+<p>Your configuration files were not submitted due to a technical issue. Your files are still saved temporarily.</p>
+    
+<form method="get" action="{% url 'configs:upload' %}">
+    <button type="submit">Upload new configuration</button>
+</form>
+{% endblock %}
