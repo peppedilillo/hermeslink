@@ -12,7 +12,7 @@ from django.utils import timezone
 from hermes import CONFIG_SIZE
 from hermes import CONFIG_TYPES
 from hermes import SPACECRAFTS_NAMES
-from hhelm.settings import AUTH_USER_MODEL
+from hlink.settings import AUTH_USER_MODEL
 
 from .validators import crc16
 

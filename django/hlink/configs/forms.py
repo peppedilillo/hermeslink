@@ -8,8 +8,8 @@ from django.core.validators import EmailValidator
 
 from hermes import CONFIG_SIZE
 from hermes import CONFIG_TYPES
-from hhelm.settings import EMAIL_CONFIGS_RECIPIENT
-from hhelm.settings import TIME_ZONE
+from hlink.settings import EMAIL_CONFIGS_RECIPIENT
+from hlink.settings import TIME_ZONE
 
 from .models import Configuration
 

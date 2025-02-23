@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from hermes import STANDARD_FILENAMES
 from hermes import STANDARD_SUFFIXES
-from hhelm.utils import LOGO_ASCII
+from hlink.utils import LOGO_ASCII
 
 from .models import config_to_sha256
 from .models import Configuration

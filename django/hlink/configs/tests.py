@@ -87,7 +87,8 @@ from django.utils import timezone
 
 from hermes import CONFIG_TYPES
 from hermes import STANDARD_FILENAMES
-from hhelm.settings import BASE_DIR
+from hlink.settings import BASE_DIR
+from hlink.settings import EMAIL_CONFIGS_RECIPIENT
 
 from .forms import CommitConfiguration
 from .forms import DeliverConfiguration
@@ -801,8 +802,6 @@ class ConfigurationViewTest(TestCase):
 
     def test_session_cleanup(self):
         """Test session cleanup after delivery"""
-        from hhelm.settings import EMAIL_CONFIGS_RECIPIENT
-
         _ = self.login_and_upload_fileset("6", self.files_fm6)
         form_data = {
             "recipient": EMAIL_CONFIGS_RECIPIENT,

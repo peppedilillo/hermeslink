@@ -1,10 +1,10 @@
 services:
   web:
-    build: ./django/hhelm
+    build: django/hlink
     command: >
       sh -c "python manage.py runserver 0.0.0.0:8000"
     volumes:
-      - ./django/hhelm:/home/app/web
+      - ./django/hlink:/home/app/web
       - ./django/dev/db:/home/app/db/
       - ./django/dev/mediafiles:/home/app/static/mediafiles
       - ./django/dev/emails:/home/app/emails
