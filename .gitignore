@@ -1,4 +1,5 @@
 
+
 ### GITHUB DEFAULTS START
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -184,5 +185,7 @@ django/dev/
 **/tailwind*
 .django.env
 .django.env.prod
+.celery.env
+.celery.env.prod
 .grafana.env
 .influxdb.env
