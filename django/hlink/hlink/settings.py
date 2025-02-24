@@ -165,7 +165,7 @@ CSRF_TRUSTED_ORIGINS = ["http://localhost:1337"]
 LOGIN_REDIRECT_URL = "/"
 
 # p. default configs email recipient
-EMAIL_CONFIGS_RECIPIENT = "giuseppe.dilillo@inaf.it" # "hermes-ops@altecspace.it"
+EMAIL_CONFIGS_RECIPIENT = "giuseppe.dilillo@inaf.it"  # "hermes-ops@altecspace.it"
 
 # p. email settings
 if DEBUG:
@@ -188,9 +188,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # p. celery settings
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL")
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND")
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
 # p. influx db auth

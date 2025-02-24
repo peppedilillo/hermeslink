@@ -9,10 +9,11 @@ FORM TESTS:
 * Test satellite model selection validation
 * Test email submit form validation including CC field formatting
 """
+
+from configs.forms import SubmitConfiguration
+from configs.forms import UploadConfiguration
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
-
-from configs.forms import UploadConfiguration, SubmitConfiguration
 
 
 class ConfigurationFormTest(TestCase):

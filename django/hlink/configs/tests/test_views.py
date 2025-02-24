@@ -33,24 +33,26 @@ DOWNLOAD VIEW TEST
 * Both tars and zip contains all file, and their content match
 * Tests against non-existent configuration and wrong formats
 """
-import tarfile
-import zipfile
+
 from io import BytesIO
 from pathlib import Path
+import tarfile
+import zipfile
 
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, Client
-from django.urls import reverse
-from django.utils import timezone
-
-from configs.forms import UploadConfiguration, CommitConfiguration
+from configs.forms import CommitConfiguration
+from configs.forms import UploadConfiguration
 from configs.models import Configuration
 from configs.validators import Status
 from configs.views import decode_config_data
-from hermes import CONFIG_TYPES
-from hlink.settings import BASE_DIR, EMAIL_CONFIGS_RECIPIENT
-
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test import Client
+from django.test import TestCase
+from django.urls import reverse
+from django.utils import timezone
+from hermes import CONFIG_TYPES
+from hlink.settings import BASE_DIR
+from hlink.settings import EMAIL_CONFIGS_RECIPIENT
 
 User = get_user_model()
 

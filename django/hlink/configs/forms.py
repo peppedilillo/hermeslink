@@ -1,15 +1,15 @@
 import re
 from typing import Literal
 
-from django import forms
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import EmailValidator
-
 from hermes import CONFIG_SIZE
 from hermes import CONFIG_TYPES
 from hlink.settings import EMAIL_CONFIGS_RECIPIENT
 from hlink.settings import TIME_ZONE
+
+from django import forms
 
 from .models import Configuration
 

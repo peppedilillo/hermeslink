@@ -1,10 +1,11 @@
 from collections import OrderedDict
+from datetime import datetime
 from functools import partial
 from hashlib import sha256
 from smtplib import SMTPException
 from typing import Literal
-from datetime import datetime
 
+import configs.downloads
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
@@ -17,8 +18,6 @@ from django.shortcuts import redirect
 from django.shortcuts import render
 from django.template.loader import render_to_string
 from django.utils import timezone
-
-import configs.downloads
 from hermes import CONFIG_TYPES
 from hermes import SPACECRAFTS_NAMES
 
@@ -151,15 +150,15 @@ def submit(request: HttpRequest) -> HttpResponse:
     def send_email(config_entry: Configuration, timestamp: datetime):
         """Prepares the email with the configuration attachments."""
         email_body = render_to_string(
-            'configs/submit_email.html',
-            context = {
-                'config': config_entry,
-                'user': request.user,
-                'submission_date': timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-                'timezone': settings.TIME_ZONE,
-                'files': ', '.join(request.session["config_data"].keys()),
-                'domain': get_current_site(request).domain,
-                'protocol': 'https' if request.is_secure() else 'http',
+            "configs/submit_email.html",
+            context={
+                "config": config_entry,
+                "user": request.user,
+                "submission_date": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                "timezone": settings.TIME_ZONE,
+                "files": ", ".join(request.session["config_data"].keys()),
+                "domain": get_current_site(request).domain,
+                "protocol": "https" if request.is_secure() else "http",
             },
         )
 

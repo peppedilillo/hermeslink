@@ -8,11 +8,7 @@ from configs.reports import write_config_readme_txt
 from hermes import STANDARD_FILENAMES
 
 
-def write_archive(
-        config: Configuration,
-        format: Literal["zip", "tar"] = "zip",
-        dirname: str = None
-) -> bytes:
+def write_archive(config: Configuration, format: Literal["zip", "tar"] = "zip", dirname: str = None) -> bytes:
     """
     Creates an archive containing configuration files from a Configuration instance.
     The archive is structured as follows:

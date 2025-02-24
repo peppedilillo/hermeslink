@@ -8,7 +8,6 @@ from django.db.models import CheckConstraint
 from django.db.models import F
 from django.db.models import Q
 from django.utils import timezone
-
 from hermes import CONFIG_SIZE
 from hermes import CONFIG_TYPES
 from hermes import SPACECRAFTS_NAMES

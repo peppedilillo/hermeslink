@@ -3,7 +3,6 @@ from enum import Enum
 from typing import Literal
 
 from django.utils import timezone
-
 from hermes import STANDARD_FILENAMES
 from hermes import STANDARD_SUFFIXES
 from hlink.utils import LOGO_ASCII

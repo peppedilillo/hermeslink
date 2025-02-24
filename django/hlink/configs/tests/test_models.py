@@ -13,14 +13,12 @@ MODEL TESTS:
 * Test that partial configurations can be created and stored
 """
 
+from configs.models import Configuration
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError
 from django.test import TestCase
 from django.utils import timezone
-from django.contrib.auth import get_user_model
-
-from configs.models import Configuration
-
 
 User = get_user_model()
 

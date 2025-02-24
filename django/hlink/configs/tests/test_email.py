@@ -10,24 +10,24 @@ EMAIL SUBMIT TESTS:
   - Database record accuracy
   - Email attachment verification
 """
-import zipfile
-from io import BytesIO
 
+from io import BytesIO
 from pathlib import Path
 from smtplib import SMTPException
 from unittest.mock import patch
+import zipfile
 
+from configs.models import Configuration
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, Client, override_settings
+from django.test import Client
+from django.test import override_settings
+from django.test import TestCase
 from django.urls import reverse
-
-from configs.models import Configuration
 from hermes import STANDARD_FILENAMES
 from hlink.settings import BASE_DIR
-
 
 User = get_user_model()
 
