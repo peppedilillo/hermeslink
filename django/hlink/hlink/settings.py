@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # p. custom apps
+    "django_celery_beat",
     "main",
     "accounts",
     "configs",
@@ -183,3 +184,17 @@ else:
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# p. celery settings
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# p. influx db auth
+INFLUXDB_URL = os.environ.get("INFLUXDB_URL", "http://influxdb2:8086")
+INFLUXDB_TOKEN = os.environ.get("DOCKER_INFLUXDB_INIT_ADMIN_TOKEN")
+INFLUXDB_ORG = os.environ.get("DOCKER_INFLUXDB_INIT_ORG")
+INFLUXDB_BUCKET = os.environ.get("DOCKER_INFLUXDB_INIT_BUCKET")

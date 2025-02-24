@@ -15,18 +15,29 @@ services:
   web:
     env_file:
       - .django.env.prod
+      - .influxdb.env
     build: 
       context: django/hlink
       dockerfile: Dockerfile.prod
     expose:
       - 8000
     command:  >
-      sh -c "python manage.py collectstatic --noinput &&
-             gunicorn hlink.wsgi:application --bind 0.0.0.0:8000"
+      sh -c "python manage.py makemigrations &&
+             python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             (celery -A hlink worker --loglevel=info &
+              celery -A hlink beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler &
+             gunicorn hlink.wsgi:application --bind 0.0.0.0:8000)"
     volumes:
       - sqlite:/home/app/db/
       - static_volume:/home/app/static/staticfiles
       - media_volume:/home/app/static/mediafiles
+    depends_on:
+      - redis
+      - influxdb2
+
+  redis:
+    image: redis:7-alpine
 
   influxdb2:
     env_file: ".influxdb.env"
@@ -55,14 +66,6 @@ services:
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - ./grafana/dashboards:/etc/grafana/dashboards
-
-  data-generator:
-    build: 
-      context: ./data-generator
-    depends_on:
-      - influxdb2
-    env_file: ".influxdb.env"
-    restart: unless-stopped
 
 volumes:
   sqlite:
