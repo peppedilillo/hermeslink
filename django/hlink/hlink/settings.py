@@ -165,7 +165,7 @@ CSRF_TRUSTED_ORIGINS = ["http://localhost:1337"]
 LOGIN_REDIRECT_URL = "/"
 
 # p. default configs email recipient
-EMAIL_CONFIGS_RECIPIENT = "giuseppe.dilillo@inaf.it"
+EMAIL_CONFIGS_RECIPIENT = "giuseppe.dilillo@inaf.it" # "hermes-ops@altecspace.it"
 
 # p. email settings
 if DEBUG:

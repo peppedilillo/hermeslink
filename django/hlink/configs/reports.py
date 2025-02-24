@@ -290,7 +290,6 @@ def write_config_readme_txt(config: Configuration) -> str:
     sha256sum, order = config_to_sha256(config, ordered_keys=non_null_configs)
 
     section_intro = [
-        f"{LOGO_ASCII}\n",
         f"This report was automatically generated with Hermes Link.",
         f"$$$$$$$$$$$${timezone.now().isoformat()}",
     ]
@@ -330,4 +329,4 @@ def write_config_readme_txt(config: Configuration) -> str:
     ]
 
     text = "\n".join(section_intro + section_metadata + section_test + section_comments)
-    return Parser(width=120, indent="  ", fmt="txt").parse(Scanner(text).scan_tokens())
+    return f"{LOGO_ASCII}\n" + Parser(width=120, indent="  ", fmt="txt").parse(Scanner(text).scan_tokens())

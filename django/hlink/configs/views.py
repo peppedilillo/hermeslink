@@ -3,9 +3,11 @@ from functools import partial
 from hashlib import sha256
 from smtplib import SMTPException
 from typing import Literal
+from datetime import datetime
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -13,6 +15,7 @@ from django.http import HttpRequest
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.shortcuts import render
+from django.template.loader import render_to_string
 from django.utils import timezone
 
 import configs.downloads
@@ -145,18 +148,33 @@ def submit(request: HttpRequest) -> HttpResponse:
     taken to an error page, else a success page is shown.
     """
 
-    def send_email(config_entry: Configuration):
+    def send_email(config_entry: Configuration, timestamp: datetime):
         """Prepares the email with the configuration attachments."""
+        email_body = render_to_string(
+            'configs/submit_email.html',
+            context = {
+                'config': config_entry,
+                'user': request.user,
+                'submission_date': timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                'timezone': settings.TIME_ZONE,
+                'files': ', '.join(request.session["config_data"].keys()),
+                'domain': get_current_site(request).domain,
+                'protocol': 'https' if request.is_secure() else 'http',
+            },
+        )
+
         email = EmailMessage(
-            subject=form.cleaned_data["subject"],
-            body=f"Configuration files uploaded by {request.user.username}",
+            subject=f"[HERMES] {config_entry.model} Payload Configuration Update - {config_entry.pk}",
+            body=email_body,
             from_email=settings.EMAIL_HOST_USER,
             cc=form.cleaned_data["cc"],
             to=(form.cleaned_data["recipient"],),
         )
-        archive_content = write_archive(config_entry, "zip")
-        email.attach(f"{config_entry.filestring()}.zip", archive_content, "application/zip")
+        dirname = f"{config_entry.filestring()}"
+        archive_content = write_archive(config_entry, "zip", dirname=dirname)
+        email.attach(f"{dirname}.zip", archive_content, "application/zip")
         email.send()
+        return
 
     def create_and_check_configuration():
         """Record submitted configuration to db."""
@@ -183,9 +201,11 @@ def submit(request: HttpRequest) -> HttpResponse:
 
     def commit_configuration(config_entry: models.Configuration):
         """Commit configuration to db"""
+        timestamp = timezone.now()
         config_entry.submitted = True
-        config_entry.submit_time = timezone.now()
+        config_entry.submit_time = timestamp
         config_entry.save()
+        return timestamp
 
     def cleanup():
         """Cleans up session data."""
@@ -204,8 +224,8 @@ def submit(request: HttpRequest) -> HttpResponse:
             try:
                 with transaction.atomic():
                     config = create_and_check_configuration()
-                    commit_configuration(config)
-                    send_email(config)
+                    timestamp = commit_configuration(config)
+                    send_email(config, timestamp)
                     cleanup()
 
             except HashError as e:

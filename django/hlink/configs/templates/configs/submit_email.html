@@ -1,0 +1,16 @@
+Dear Mission Operations Team,
+
+A new configuration for the HERMES {{ config.model }} payload has been submitted by {{ user.username }}.
+
+Configuration ID: {{ config.pk }}
+Submission Date: {{ submission_date }} ({{ timezone }})
+Files: {{ files }}
+
+You can commit an uplink time for this configuration at: {{ protocol }}://{{ domain }}{% url 'configs:commit' config_id=config.id %}
+
+Please find the configuration files attached as a ZIP archive.
+The included readme.txt contains detailed information about this configuration and validation results.
+
+
+Best regards,
+HERMES Link System

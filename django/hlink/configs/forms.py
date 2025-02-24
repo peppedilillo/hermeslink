@@ -76,7 +76,6 @@ class SubmitConfiguration(forms.Form):
     """
 
     recipient = forms.CharField(initial=EMAIL_CONFIGS_RECIPIENT, disabled=True)
-    subject = forms.CharField(initial="HERMES configuration files")
     cc = forms.CharField(required=False)
 
     def clean_cc(self):

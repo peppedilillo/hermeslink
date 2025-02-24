@@ -428,23 +428,6 @@ class ConfigurationFormTest(TestCase):
             self.assertFalse(form.is_valid(), f"Should have failed for CC: {cc}")
             self.assertIn("cc", form.errors)
 
-    def test_submit_form_subject_validation(self):
-        """Test subject field validation"""
-        # Test empty subject
-        form_data = {
-            "recipient": "test@example.com",
-            "subject": "",
-        }
-        form = SubmitConfiguration(data=form_data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("subject", form.errors)
-
-        # Test whitespace-only subject
-        form_data["subject"] = "   "
-        form = SubmitConfiguration(data=form_data)
-        self.assertFalse(form.is_valid())
-        self.assertIn("subject", form.errors)
-
 
 def f2c(file: Path):
     """File to binary string helper"""
@@ -928,7 +911,6 @@ class ConfigurationEmailTest(TestCase):
 
         form_data = {
             "recipient": settings.EMAIL_CONFIGS_RECIPIENT,
-            "subject": "Test Configuration",
             "cc": "cc@example.com",
         }
 
@@ -940,14 +922,13 @@ class ConfigurationEmailTest(TestCase):
         email = mail.outbox[0]
 
         # Verify email content
-        self.assertEqual(email.subject, "Test Configuration")
         self.assertEqual(email.to, [settings.EMAIL_CONFIGS_RECIPIENT])
         self.assertEqual(email.cc, ["cc@example.com"])
 
         # Verify attachments
         self.assertEqual(len(email.attachments), 1)
         with zipfile.ZipFile(BytesIO(email.attachments[0][1])) as zf:
-            filenames = zf.namelist()
+            filenames = [Path(fn).name for fn in zf.namelist()]
         self.assertTrue(
             all(STANDARD_FILENAMES[ftype] in filenames for ftype in ["acq", "acq0", "asic0", "asic1", "bee"])
         )
@@ -1007,11 +988,11 @@ class ConfigurationEmailTest(TestCase):
         self.assertEqual(len(email.attachments), 1)
         with zipfile.ZipFile(BytesIO(email.attachments[0][1])) as zf:
             filenames = zf.namelist()
-            filenames = [*filter(lambda fn: not fn.startswith("readme"), filenames)]
+            filenames = [*filter(lambda fn: not fn.endswith("readme.txt"), filenames)]
             self.assertTrue(any(filenames))
-            for filename in filenames:
-                ftype = filename.split(".")[0].lower()
-                content = zf.read(filename)
+            for filename in map(Path, filenames):
+                ftype = Path(filename).stem.lower()
+                content = zf.read(str(filename))
                 original_file = self.files_fm6[ftype].open().read()
                 self.assertEqual(content, original_file)
 
@@ -1057,7 +1038,7 @@ class ConfigurationEmailTest(TestCase):
         # email attachment contains only uploaded files
         email = mail.outbox[0]
         with zipfile.ZipFile(BytesIO(email.attachments[0][1])) as zf:
-            filenames = set(fn for fn in zf.namelist() if not fn.startswith("readme"))
+            filenames = set(Path(fn).name for fn in zf.namelist() if not fn.endswith("readme.txt"))
             self.assertEqual(filenames, {STANDARD_FILENAMES["acq"], STANDARD_FILENAMES["bee"]})
 
         # check database record
@@ -1220,17 +1201,19 @@ class DownloadViewTest(TestCase):
 
         # Verify ZIP content
         with zipfile.ZipFile(BytesIO(response.content)) as zf:
-            # Check all files are present
-            self.assertTrue("ACQ.cfg" in zf.namelist())
-            self.assertTrue("ACQ0.cfg" in zf.namelist())
-            self.assertTrue("ASIC0.cfg" in zf.namelist())
-            self.assertTrue("ASIC1.cfg" in zf.namelist())
-            self.assertTrue("BEE.cfg" in zf.namelist())
-            self.assertTrue("readme.txt" in zf.namelist())
+            all_paths = zf.namelist()
+            self.assertTrue(len(all_paths) > 0, "ZIP file is empty")
+            dirname = Path(all_paths[0]).parent.name
 
-            # Verify file contents
-            self.assertEqual(zf.read("ACQ.cfg"), self.config_data["acq"])
-            self.assertEqual(zf.read("ASIC0.cfg"), self.config_data["asic0"])
+            self.assertTrue(f"{dirname}/ACQ.cfg" in all_paths)
+            self.assertTrue(f"{dirname}/ACQ0.cfg" in all_paths)
+            self.assertTrue(f"{dirname}/ASIC0.cfg" in all_paths)
+            self.assertTrue(f"{dirname}/ASIC1.cfg" in all_paths)
+            self.assertTrue(f"{dirname}/BEE.cfg" in all_paths)
+            self.assertTrue(f"{dirname}/readme.txt" in all_paths)
+
+            self.assertEqual(zf.read(f"{dirname}/ACQ.cfg"), self.config_data["acq"])
+            self.assertEqual(zf.read(f"{dirname}/ASIC0.cfg"), self.config_data["asic0"])
 
     def test_download_tar_format(self):
         """Test downloading configuration in TAR format"""
@@ -1240,7 +1223,7 @@ class DownloadViewTest(TestCase):
         self.assertEqual(response["Content-Type"], "application/x-tar")
 
         with tarfile.open(fileobj=BytesIO(response.content), mode="r:gz") as tf:
-            names = tf.getnames()
+            names = [Path(fn).name for fn in tf.getnames()]
             self.assertTrue("ACQ.cfg" in names)
             self.assertTrue("ACQ0.cfg" in names)
             self.assertTrue("ASIC0.cfg" in names)

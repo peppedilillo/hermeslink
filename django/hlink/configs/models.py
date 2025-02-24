@@ -182,7 +182,7 @@ class Configuration(models.Model):
         return {ftype: content.hex() for ftype, content in self.get_config_data().items()}
 
     def filestring(self) -> str:
-        return f"hermes_{self.id:03d}_{self.model}_{self.date:%Y%m%d}"
+        return f"hermes_{self.model}_config_id{self.id:04d}_{self.date:%Y%m%d}"
 
 
 def config_to_crc16(
