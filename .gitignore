@@ -189,3 +189,5 @@ django/dev/
 .celery.env.prod
 .grafana.env
 .influxdb.env
+.postgres.env
+.postgres.env.prod

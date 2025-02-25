@@ -17,6 +17,10 @@ services:
       - .influxdb.env
       - .django.env.prod
       - .celery.env.prod
+      - .postgres.env.prod
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
     build: 
       context: django/hlink
       dockerfile: Dockerfile.prod
@@ -30,15 +34,39 @@ services:
               celery -A hlink beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler &
              gunicorn hlink.wsgi:application --bind 0.0.0.0:8000)"
     volumes:
-      - sqlite:/home/app/db/
       - static_volume:/home/app/static/staticfiles
       - media_volume:/home/app/static/mediafiles
     depends_on:
-      - redis
-      - influxdb2
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      influxdb2:
+        condition: service_healthy
 
   redis:
     image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 5
+
+  postgres:
+    env_file:
+      - .postgres.env.prod
+    image: postgres:13-alpine
+    restart: always
+    expose:
+      - 5432
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   influxdb2:
     env_file:
@@ -48,6 +76,12 @@ services:
       - 8086
     environment:
       DOCKER_INFLUXDB_INIT_MODE: setup
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8086/health"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 5s
     volumes:
       - ./influxdb/scripts:/docker-entrypoint-initdb.d
       - influxdb2-data:/var/lib/influxdb2
@@ -70,7 +104,7 @@ services:
       - ./grafana/dashboards:/etc/grafana/dashboards
 
 volumes:
-  sqlite:
   static_volume:
   media_volume:
   influxdb2-data:
+  postgres-data:

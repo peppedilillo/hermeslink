@@ -24,10 +24,6 @@ ENV APP_HOME=/home/app/web
 RUN mkdir -p $HOME
 RUN mkdir $APP_HOME
 
-# create a directory for the db
-ENV DB_DIR=/home/app/db/
-RUN mkdir $DB_DIR
-
 # create a directory for static files
 ENV STATIC_DIR=/home/app/static/staticfiles
 RUN mkdir -p $STATIC_DIR
@@ -55,3 +51,4 @@ RUN chown -R app:app $HOME
 
 # and pass in the new user
 USER app
+

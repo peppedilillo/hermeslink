@@ -4,6 +4,10 @@ services:
       - .django.env
       - .influxdb.env
       - .celery.env
+      - .postgres.env
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
     build: django/hlink
     command: >
       sh -c "python manage.py makemigrations &&
@@ -13,14 +17,37 @@ services:
              python manage.py runserver 0.0.0.0:8000)"
     volumes:
       - ./django/hlink:/home/app/web
-      - ./django/dev/db:/home/app/db/
       - ./django/dev/mediafiles:/home/app/static/mediafiles
       - ./django/dev/emails:/home/app/emails
     ports:
       - 8000:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   redis:
     image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 1s
+      retries: 5
+
+  postgres:
+    env_file:
+      - .postgres.env
+    image: postgres:13-alpine
+    restart: always
+    expose:
+      - 5432
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 1s
+      timeout: 1s
+      retries: 5
+      start_period: 1s
 
   flower:
     env_file:
@@ -32,3 +59,14 @@ services:
     command: celery flower
     ports:
       - 5555:5555
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  adminer:
+    image: adminer
+    ports:
+      - 8080:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
