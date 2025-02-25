@@ -9,10 +9,11 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 
-<body class="min-h-screen bg-black text-white font-sans">
-  <div class="max-w-6xl mx-auto px-16">
+{% load static %}
+<body class="min-h-screen bg-black text-white font-sans flex flex-col">
+  <div class="max-w-6xl w-full mx-auto px-16 flex-grow flex flex-col">
     <!-- Navbar -->
-    <nav class="w-full py-4">
+    <nav class="w-full py-4 ">
       <div class="flex justify-between">
           <a href="{% url 'main:index' %}" class="text-6xl font-extrabold">
             HL
@@ -28,7 +29,7 @@
       </div>
     </nav>
 
-    <div class="flex">
+    <div class="flex flex-grow">
       <!-- Sidebar -->
       <aside class="w-52 flex-shrink-0 space-y-6 py-6">
         <div>
@@ -89,6 +90,20 @@
         {% block content %}{% endblock %}
       </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="w-full pt-24 pb-6 mt-auto text-xs text-gray-500 text-mono">
+      <div class="flex items-center justify-center gap-8 mx-auto">
+        <img src="{% static 'pics/logo_H_white.png' %}" class="h-16 object-scale-down">
+        <div class="w-48">Hermes Link is a web application developed for the HERMES collaboration at <span class="text-nowrap">ASI-SSDC</span>. ~p25</div>
+        <div class="flex flex-col">
+          <a class="transition-colors duration-300 hover:text-white">code</a>
+          <a class="transition-colors duration-300 hover:text-white">hermes</a>
+          <a class="transition-colors duration-300 hover:text-white">about</a>
+        </div>
+        <img src="{% static 'pics/bulletsticker.png' %}" class="h-10 object-scale-down">
+      </div>
+    </footer>
   </div>
 </body>
 </html>
