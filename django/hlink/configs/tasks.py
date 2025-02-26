@@ -1,22 +1,22 @@
+import logging
 import random
 from smtplib import SMTPException
 
 from celery import shared_task
-from django.template.loader import render_to_string
-from django.utils import timezone
+from configs.downloads import write_archive
+from configs.models import Configuration
 from django.core.mail import EmailMessage
 from django.db import transaction
+from django.template.loader import render_to_string
+from django.utils import timezone
 from influxdb_client import InfluxDBClient
 from influxdb_client import Point
 from influxdb_client.client.write_api import SYNCHRONOUS
 
-from configs.downloads import write_archive
-from configs.models import Configuration
 from hlink import settings
 
-import logging
-
 logger = logging.getLogger(__name__)
+
 
 @shared_task(
     bind=True,
@@ -26,12 +26,12 @@ logger = logging.getLogger(__name__)
     retry_jitter=True,
 )
 def send_config_email(
-        self,
-        config_id: int,
-        cc: list[str],
-        recipients: list[str],
-        domain: str,
-        protocol: str,
+    self,
+    config_id: int,
+    cc: list[str],
+    recipients: list[str],
+    domain: str,
+    protocol: str,
 ):
     try:
         with transaction.atomic():
@@ -78,6 +78,7 @@ def send_config_email(
     except Exception as e:
         logger.error(f"Unexpected error for config {config_id}: {str(e)}")
         return
+
 
 @shared_task
 def test_task():

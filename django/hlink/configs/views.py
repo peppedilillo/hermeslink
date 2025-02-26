@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from functools import partial
 from hashlib import sha256
+import logging
 from smtplib import SMTPException
 from typing import Literal
 
@@ -26,9 +27,8 @@ from .tasks import send_config_email
 from .validators import Status
 from .validators import validate_configurations
 
-import logging
-
 logger = logging.getLogger(__name__)
+
 
 # in this module we will deal with OrderedDict for bookkeeping the configuration file data.
 # this choice is driven by the need of an unambiguous order to keep track of the sha256, which we
@@ -144,6 +144,7 @@ def submit(request: HttpRequest) -> HttpResponse:
     the configuration to the database. If an error is encountered, the user is
     taken to an error page, else a success page is shown.
     """
+
     def create_and_check_configuration():
         """Record submitted configuration to db."""
         config_data = decode_config_data(request.session["config_data"])
@@ -166,7 +167,6 @@ def submit(request: HttpRequest) -> HttpResponse:
         if request.session["config_hash"] != record_hash:
             raise HashError("Input file hash does not match configuration record.")
         return config_entry
-
 
     def cleanup():
         """Cleans up session data."""
