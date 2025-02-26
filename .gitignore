@@ -191,3 +191,4 @@ django/dev/
 .influxdb.env
 .postgres.env
 .postgres.env.prod
+.ssh.env

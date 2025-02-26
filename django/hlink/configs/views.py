@@ -2,7 +2,6 @@ from collections import OrderedDict
 from functools import partial
 from hashlib import sha256
 import logging
-from smtplib import SMTPException
 from typing import Literal
 
 import configs.downloads
@@ -17,15 +16,13 @@ from django.shortcuts import render
 from hermes import CONFIG_TYPES
 from hermes import SPACECRAFTS_NAMES
 
-from . import forms
-from . import models
-from .forms import CommitConfiguration
-from .models import config_to_sha256
-from .models import Configuration
-from .reports import write_test_report_html
-from .tasks import send_config_email
-from .validators import Status
-from .validators import validate_configurations
+from configs import forms
+from configs.models import Configuration, config_to_sha256
+from configs.reports import write_test_report_html
+from configs.tasks import send_config_email
+from configs.tasks import ssh_update_caldb
+from configs.validators import Status
+from configs.validators import validate_configurations
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +72,7 @@ def upload(request: HttpRequest) -> HttpResponse:
 
 def validate_config_model(model: Literal[*SPACECRAFTS_NAMES]) -> bool:
     """Checks config model to be allowed"""
-    model_keys, _ = zip(*models.Configuration.MODELS)
+    model_keys, _ = zip(*Configuration.MODELS)
     return model in model_keys
 
 
@@ -149,7 +146,7 @@ def submit(request: HttpRequest) -> HttpResponse:
         """Record submitted configuration to db."""
         config_data = decode_config_data(request.session["config_data"])
 
-        config_entry = models.Configuration(
+        config_entry = Configuration(
             author=request.user,
             submitted=False,
             submit_time=None,
@@ -223,7 +220,7 @@ def _index(
     """
     View to display all recorded configurations.
     """
-    configurations = models.Configuration.objects.filter(**filter_by).order_by(*order_by)
+    configurations = Configuration.objects.filter(**filter_by).order_by(*order_by)
     paginator = Paginator(configurations, 10)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
@@ -288,14 +285,17 @@ def commit(request, config_id: int):
         return HttpResponse("403: Configuration has already been committed", status=403)
 
     if request.method == "POST":
-        form = CommitConfiguration(request.POST, instance=config)
+        form = forms.CommitConfiguration(request.POST, instance=config)
         if form.is_valid():
             config.uplinked = True
             config.uplink_time = form.cleaned_data["uplink_time"]
             form.save()
+
+            if config.asic1 is not None:
+                ssh_update_caldb.delay(config_id=config_id)
             return redirect("configs:history")
     else:
-        form = CommitConfiguration(instance=config)
+        form = forms.CommitConfiguration(instance=config)
 
     return render(
         request,

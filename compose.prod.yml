@@ -14,10 +14,11 @@ services:
 
   web:
     env_file:
-      - .influxdb.env
       - .django.env.prod
       - .celery.env.prod
       - .postgres.env.prod
+      - .influxdb.env
+      - .ssh.env
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
