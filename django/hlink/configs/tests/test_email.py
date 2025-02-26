@@ -80,6 +80,7 @@ class ConfigurationEmailTest(TestCase):
         response = self.client.get(reverse("configs:test"))
         return response
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_successful_email_submit(self):
         """Test that email is sent successfully with correct content"""
@@ -108,6 +109,7 @@ class ConfigurationEmailTest(TestCase):
         self.assertTrue(all(STANDARD_FILENAMES[ftype] in filenames for ftype in self.files_fm6.keys()))
         self.assertTrue("readme.txt" in filenames)
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_submit_with_multiple_cc(self):
         """Test email submit with multiple CC recipients"""
@@ -121,21 +123,7 @@ class ConfigurationEmailTest(TestCase):
         email, *_ = mail.outbox
         self.assertEqual(email.cc, ["cc1@example.com", "cc2@example.com"])
 
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
-    def test_email_failure_rollback(self):
-        """Test that database changes are rolled back if email fails"""
-        self.prepare_submit_session()
-        with patch("django.core.mail.EmailMessage.send", side_effect=SMTPException("SMTP Error")):
-            response = self.client.post(reverse("configs:submit"), data={})
-
-            self.assertTemplateUsed(response, "configs/submit_error.html")
-            self.assertEqual(Configuration.objects.count(), 0)
-            # session should still be valid
-            self.assertIn("config_model", self.client.session)
-            self.assertIn("config_data", self.client.session)
-            self.assertIn("config_hash", self.client.session)
-            self.assertIn("test_status", self.client.session)
-
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_attachment_content_verification(self):
         """Test that email attachments contain correct file content"""
@@ -152,6 +140,7 @@ class ConfigurationEmailTest(TestCase):
                 original_file = self.files_fm6[ftype].open().read()
                 self.assertEqual(content, original_file)
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_submit_database_record(self):
         """Test that successful submit creates correct database record"""
@@ -171,6 +160,7 @@ class ConfigurationEmailTest(TestCase):
             original_file.seek(0)
             self.assertEqual(getattr(config, file_type), original_file.read())
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_partial_config_submit(self):
         """Test submit of partial configuration files"""

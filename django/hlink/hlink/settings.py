@@ -173,6 +173,7 @@ if DEBUG:
     EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"
     # p. the `EMAIL_DIR` environment variable should be set by docker file
     EMAIL_FILE_PATH = Path(os.environ.get("EMAIL_DIR"))
+    EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
 else:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
     EMAIL_HOST = os.environ.get("EMAIL_HOST")

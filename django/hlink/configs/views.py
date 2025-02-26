@@ -1,36 +1,34 @@
 from collections import OrderedDict
-from datetime import datetime
 from functools import partial
 from hashlib import sha256
 from smtplib import SMTPException
 from typing import Literal
 
 import configs.downloads
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
-from django.core.mail import EmailMessage
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.shortcuts import render
-from django.template.loader import render_to_string
-from django.utils import timezone
 from hermes import CONFIG_TYPES
 from hermes import SPACECRAFTS_NAMES
 
 from . import forms
 from . import models
-from .downloads import write_archive
 from .forms import CommitConfiguration
 from .models import config_to_sha256
 from .models import Configuration
 from .reports import write_test_report_html
+from .tasks import send_config_email
 from .validators import Status
 from .validators import validate_configurations
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 # in this module we will deal with OrderedDict for bookkeeping the configuration file data.
 # this choice is driven by the need of an unambiguous order to keep track of the sha256, which we
@@ -146,35 +144,6 @@ def submit(request: HttpRequest) -> HttpResponse:
     the configuration to the database. If an error is encountered, the user is
     taken to an error page, else a success page is shown.
     """
-
-    def send_email(config_entry: Configuration, timestamp: datetime):
-        """Prepares the email with the configuration attachments."""
-        email_body = render_to_string(
-            "configs/submit_email.html",
-            context={
-                "config": config_entry,
-                "user": request.user,
-                "submission_date": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                "timezone": settings.TIME_ZONE,
-                "files": ", ".join(request.session["config_data"].keys()),
-                "domain": get_current_site(request).domain,
-                "protocol": "https" if request.is_secure() else "http",
-            },
-        )
-
-        email = EmailMessage(
-            subject=f"[HERMES] {config_entry.model} Payload Configuration Update - {config_entry.pk}",
-            body=email_body,
-            from_email=settings.EMAIL_HOST_USER,
-            cc=form.cleaned_data["cc"],
-            to=(form.cleaned_data["recipient"],),
-        )
-        dirname = f"{config_entry.filestring()}"
-        archive_content = write_archive(config_entry, "zip", dirname=dirname)
-        email.attach(f"{dirname}.zip", archive_content, "application/zip")
-        email.send()
-        return
-
     def create_and_check_configuration():
         """Record submitted configuration to db."""
         config_data = decode_config_data(request.session["config_data"])
@@ -198,13 +167,6 @@ def submit(request: HttpRequest) -> HttpResponse:
             raise HashError("Input file hash does not match configuration record.")
         return config_entry
 
-    def commit_configuration(config_entry: models.Configuration):
-        """Commit configuration to db"""
-        timestamp = timezone.now()
-        config_entry.submitted = True
-        config_entry.submit_time = timestamp
-        config_entry.save()
-        return timestamp
 
     def cleanup():
         """Cleans up session data."""
@@ -223,18 +185,22 @@ def submit(request: HttpRequest) -> HttpResponse:
             try:
                 with transaction.atomic():
                     config = create_and_check_configuration()
-                    timestamp = commit_configuration(config)
-                    send_email(config, timestamp)
+                    config.save()
                     cleanup()
 
+                send_config_email.delay(
+                    config_id=config.id,
+                    cc=form.cleaned_data["cc"],
+                    recipients=(form.cleaned_data["recipient"],),
+                    domain=get_current_site(request).domain,
+                    protocol="https" if request.is_secure() else "http",
+                )
+
             except HashError as e:
-                print(f"Integrity error: {str(e)}")
+                logger.error(f"Integrity error: {str(e)}")
                 return render(request, "configs/submit_error.html", {"error": "Compromised input integrity."})
-            except SMTPException as e:
-                print(f"Email submit failed: {str(e)}")
-                return render(request, "configs/submit_error.html", {"error": "Failed to send email"})
             except Exception as e:
-                print(f"Unexpected error submitting email: {str(e)}")
+                logger.error(f"Unexpected error submitting email: {str(e)}")
                 return render(request, "configs/submit_error.html", {"error": "An unexpected error occurred"})
             return render(request, "configs/submit_success.html", {})
 
