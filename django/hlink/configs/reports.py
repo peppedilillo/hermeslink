@@ -5,7 +5,6 @@ from typing import Literal
 from django.utils import timezone
 from hermes import STANDARD_FILENAMES
 from hermes import STANDARD_SUFFIXES
-from hlink.utils import LOGO_ASCII
 
 from .models import config_to_sha256
 from .models import Configuration
@@ -329,3 +328,11 @@ def write_config_readme_txt(config: Configuration) -> str:
 
     text = "\n".join(section_intro + section_metadata + section_test + section_comments)
     return f"{LOGO_ASCII}\n" + Parser(width=120, indent="  ", fmt="txt").parse(Scanner(text).scan_tokens())
+
+
+LOGO_ASCII = r""" ______  _______ 
+ ___  / / /__  / 
+ __  /_/ /__  /  
+ _  __  / _  /___
+ /_/ /_/  /_____/
+"""

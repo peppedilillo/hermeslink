@@ -19,7 +19,7 @@ from hermes import SPACECRAFTS_NAMES
 from configs import forms
 from configs.models import Configuration, config_to_sha256
 from configs.reports import write_test_report_html
-from configs.tasks import send_config_email
+from configs.tasks import email_config_to_moc
 from configs.tasks import ssh_update_caldb
 from configs.validators import Status
 from configs.validators import validate_configurations
@@ -185,10 +185,9 @@ def submit(request: HttpRequest) -> HttpResponse:
                     config.save()
                     cleanup()
 
-                send_config_email.delay(
+                email_config_to_moc.delay(
                     config_id=config.id,
                     cc=form.cleaned_data["cc"],
-                    recipients=(form.cleaned_data["recipient"],),
                     domain=get_current_site(request).domain,
                     protocol="https" if request.is_secure() else "http",
                 )

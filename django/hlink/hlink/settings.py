@@ -165,9 +165,6 @@ CSRF_TRUSTED_ORIGINS = ["http://localhost:1337"]
 # p. sets login url to index instead of profile page
 LOGIN_REDIRECT_URL = "/"
 
-# p. default configs email recipient
-EMAIL_CONFIGS_RECIPIENT = "giuseppe.dilillo@inaf.it"  # "hermes-ops@altecspace.it"
-
 # p. email settings
 if DEBUG:
     EMAIL_BACKEND = "django.core.mail.backends.filebased.EmailBackend"

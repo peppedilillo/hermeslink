@@ -13,12 +13,9 @@ EMAIL SUBMIT TESTS:
 
 from io import BytesIO
 from pathlib import Path
-from smtplib import SMTPException
-from unittest.mock import patch
 import zipfile
 
 from configs.models import Configuration
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -28,6 +25,8 @@ from django.test import TestCase
 from django.urls import reverse
 from hermes import STANDARD_FILENAMES
 from hlink.settings import BASE_DIR
+from hlink import contacts
+
 
 User = get_user_model()
 
@@ -82,13 +81,12 @@ class ConfigurationEmailTest(TestCase):
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
-    def test_successful_email_submit(self):
+    def test_submit_session_sends_right_email(self):
         """Test that email is sent successfully with correct content"""
         self.prepare_submit_session()
 
         form_data = {
-            "recipient": settings.EMAIL_CONFIGS_RECIPIENT,
-            "cc": "cc@example.com",
+            "cc": "cc@example.com; cc2@example.com",
         }
 
         response = self.client.post(reverse("configs:submit"), data=form_data)
@@ -99,8 +97,9 @@ class ConfigurationEmailTest(TestCase):
         email = mail.outbox[0]
 
         # Verify email content
-        self.assertEqual(email.to, [settings.EMAIL_CONFIGS_RECIPIENT])
-        self.assertEqual(email.cc, ["cc@example.com"])
+        self.assertTrue(len(email.to) == len(contacts.EMAILS_MOC))
+        self.assertTrue(all(x == y for x, y in zip(email.to, contacts.EMAILS_MOC)))
+        self.assertEqual(email.cc, ["cc@example.com", "cc2@example.com"])
 
         # Verify attachments
         self.assertEqual(len(email.attachments), 1)
@@ -115,7 +114,7 @@ class ConfigurationEmailTest(TestCase):
         """Test email submit with multiple CC recipients"""
         self.prepare_submit_session()
         form_data = {
-            "recipient": settings.EMAIL_CONFIGS_RECIPIENT,
+            "recipient": "recipient@email.com",
             "cc": "cc1@example.com; cc2@example.com",
         }
         response = self.client.post(reverse("configs:submit"), data=form_data)

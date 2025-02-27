@@ -6,8 +6,8 @@
     {% csrf_token %}
     <div class="space-y-2">
         <div class="flex">
-            <div class="w-24 pr-4">{{ form.recipient.label_tag }}</div>
-            <div class="flex-1 max-w-[28rem]">{{ form.recipient | addclass:"w-full bg-black text-white p-1 border border-white"}}</div>
+            <div class="w-24 pr-4">{{ form.recipients.label_tag }}</div>
+            <div class="flex-1 max-w-[28rem]">{{ form.recipients | addclass:"w-full bg-black text-white p-1 border border-white"}}</div>
         </div>
         <div class="flex">
             <div class="w-24 pr-4">{{ form.cc.label_tag }}</div>

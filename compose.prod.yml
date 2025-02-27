@@ -19,6 +19,7 @@ services:
       - .postgres.env.prod
       - .influxdb.env
       - .ssh.env
+      - .contacts.env
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432

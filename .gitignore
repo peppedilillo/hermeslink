@@ -192,3 +192,4 @@ django/dev/
 .postgres.env
 .postgres.env.prod
 .ssh.env
+.contacts.env

@@ -14,7 +14,7 @@ from configs.forms import SubmitConfiguration
 from configs.forms import UploadConfiguration
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
-
+from unittest.mock import patch
 
 class ConfigurationFormTest(TestCase):
     @classmethod
@@ -89,7 +89,8 @@ class ConfigurationFormTest(TestCase):
         form = SubmitConfiguration(data=form_data)
         self.assertTrue(form.is_valid())
 
-    def test_submit_form_cc_validation(self):
+    @patch("configs.forms.logger")
+    def test_submit_form_cc_validation(self, _):
         """Test CC field validation with various formats"""
         valid_cc_formats = [
             "test@example.com",

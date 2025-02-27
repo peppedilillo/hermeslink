@@ -2,6 +2,9 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Literal
 
+from django.core.exceptions import ValidationError
+from django.core.validators import EmailValidator
+
 import hermes
 from hermes.configs import bytest_to_bitdict_asic
 from hermes.configs import parse_bitdict_asic
@@ -198,3 +201,35 @@ def validate_configurations(
     }
 
     return {ftype: [f() for f in test_map[ftype]] for ftype in bytesdict.keys()}
+
+
+def parse_multiple_emails(value: str) -> list[str]:
+    """
+    Parses a list of email addresses. Supports:
+     - `prova@dom.com`
+     - `prova@dom.com;`
+     - `prova@dom.com; lol@dom1.com; ..`
+     - `prova@dom.com; lol@dom1.com; ..;`
+    """
+    value = value.strip()
+    if not value:
+        return []
+    elif ";" not in value:
+        return [value]
+    values = [s.strip() for s in value.split(";")]
+    # user can terminate value cc list with ";"
+    if values[-1] == "":
+        values.pop(-1)
+    return values
+
+
+def validate_multiple_emails(emails: list[str]):
+    invalid_emails = []
+    for email in emails:
+        try:
+            EmailValidator()(email)
+        except ValidationError:
+            invalid_emails.append(email)
+    if invalid_emails:
+        raise ValidationError(f"The emails '{', '.join(invalid_emails)}' are not valid.")
+    return

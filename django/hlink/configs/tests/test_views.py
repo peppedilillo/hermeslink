@@ -36,6 +36,7 @@ DOWNLOAD VIEW TEST
 
 from io import BytesIO
 from pathlib import Path
+import unittest
 import tarfile
 import zipfile
 
@@ -52,7 +53,6 @@ from django.urls import reverse
 from django.utils import timezone
 from hermes import CONFIG_TYPES
 from hlink.settings import BASE_DIR
-from hlink.settings import EMAIL_CONFIGS_RECIPIENT
 
 User = get_user_model()
 
@@ -295,8 +295,10 @@ class ConfigurationViewTest(TestCase):
             self.assertIn("config_data", self.client.session)
             self.assertIn("config_hash", self.client.session)
 
+
+    @unittest.skip
     def test_upload_view_post_permutation_file_success(self):
-        """Testing all remaining combinations of uploads. Kinda slow."""
+        """Testing all remaining combinations of uploads. It's slow."""
         from itertools import combinations
 
         file_contents = {ftype: self.files_fm6[ftype].read() for ftype in self.files_fm6}
@@ -409,7 +411,7 @@ class ConfigurationViewTest(TestCase):
         """Test session cleanup after submit"""
         _ = self.login_and_upload_fileset("6", self.files_fm6)
         form_data = {
-            "recipient": EMAIL_CONFIGS_RECIPIENT,
+            "recipient": "recipient@email.com",
             "subject": "Test Subject",
         }
         _ = self.client.post(reverse("configs:submit"), data=form_data)

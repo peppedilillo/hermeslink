@@ -1,17 +1,21 @@
 import re
 from typing import Literal
+import logging
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.core.validators import EmailValidator
 from hermes import CONFIG_SIZE
 from hermes import CONFIG_TYPES
-from hlink.settings import EMAIL_CONFIGS_RECIPIENT
-from hlink.settings import TIME_ZONE
+from hlink.contacts import EMAILS_MOC
+from .validators import parse_multiple_emails, validate_multiple_emails
 
 from django import forms
 
 from .models import Configuration
+
+
+logger = logging.getLogger(__name__)
 
 
 def check_length(
@@ -26,24 +30,6 @@ def check_length(
             f"Your {ftype} configuration file size is {file.size} bytes. "
             f"Files of type {ftype} must have size {CONFIG_SIZE[ftype]} bytes."
         )
-
-
-def validate_cc(value: str):
-    """
-    Validate a list of Cc email addresses. Supports:
-     - `prova@dom.com`
-     - `prova@dom.com;`
-     - `prova@dom.com; lol@dom1.com; ..`
-     - `prova@dom.com; lol@dom1.com; ..;`
-    """
-    value = value.strip()
-    if ";" not in value:
-        return EmailValidator()(value)
-    values = [s.strip() for s in value.split(";")]
-    # user can terminate value cc list with ";"
-    if values[-1] == "":
-        values.pop()
-    return all(EmailValidator()(value) for value in values)
 
 
 class UploadConfiguration(forms.Form):
@@ -75,30 +61,25 @@ class SubmitConfiguration(forms.Form):
     A form for mailing a configuration.
     """
 
-    recipient = forms.CharField(initial=EMAIL_CONFIGS_RECIPIENT, disabled=True)
+    recipients = forms.CharField(
+        # note, this is just for displaying purpose in form.
+        initial=";".join(EMAILS_MOC),
+        disabled=True,
+    )
     cc = forms.CharField(required=False)
 
+    @staticmethod
+    def clean_recipients() -> tuple[str]:
+        return EMAILS_MOC
+
     def clean_cc(self):
-        value = self.cleaned_data.get("cc").strip()
-        if not value:
-            return []
-        validate = EmailValidator()
-        if ";" not in value:
-            try:
-                validate(value)
-            except ValidationError:
-                raise ValidationError(f"Email address  '{value}' not valid.")
-            return [value]
-        values = [s.strip() for s in value.split(";")]
-        # user can terminate value cc list with ";"
-        if values[-1] == "":
-            values.pop()
-        for value in values:
-            try:
-                validate(value)
-            except ValidationError:
-                raise ValidationError(f"Email address '{value}' not valid.")
-        return values
+        emails = parse_multiple_emails(self.cleaned_data.get("cc"))
+        try:
+            validate_multiple_emails(emails)
+        except ValidationError as e:
+            logger.error(f"Invalid Cc list: {e}")
+            raise ValidationError("Some of the addresses in the Cc list are invalid.")
+        return emails
 
 
 class CommitConfiguration(forms.ModelForm):

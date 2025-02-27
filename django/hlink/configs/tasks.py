@@ -23,9 +23,53 @@ from paramiko import ssh_exception
 
 from hermes import CONFIG_SIZE, SPACECRAFTS_NAMES
 from hlink import settings
+from hlink import contacts
 
 logger = logging.getLogger(__name__)
 
+
+def email_error_to_admin(
+        error_message: str,
+        task_name: str,
+        config_id: int | None = None,
+):
+    """
+    Sends an error notification email to administrators.
+    """
+    subject = f"[HERMES] ERROR: {task_name}" + (f" - Config #{config_id}" if config_id else "")
+
+    body = (f"Task: {task_name}\n"
+            f"Error: {error_message}\n"
+            f"Config ID: {config_id if config_id else 'N/A'}\n"
+            f"Time: {timezone.now()}\n\n"
+            f"This is an automated message from Hermes Link.")
+
+    try:
+        email = EmailMessage(
+            subject=subject,
+            body=body,
+            from_email=settings.EMAIL_HOST_USER,
+            to=contacts.EMAILS_ADMIN,
+        )
+        email.send()
+    except Exception as e:
+        logger.error(f"Failed to send admin error notification: {e}")
+    logger.info(f"Admin error notification sent for {task_name}" +
+                (f", config {config_id}" if config_id else ""))
+    return
+
+
+def log_error_and_notify_admin(
+        level: int,
+        error_message: str,
+        task_name: str,
+        config_id: int | None = None,
+):
+    """
+    Simple utility wrapper to admin notification email.
+    """
+    logger.log(level=level, msg=error_message)
+    return email_error_to_admin(error_message, task_name, config_id)
 
 
 def parse_update_caldb_command(
@@ -64,6 +108,36 @@ def parse_remote_asic1_path(
     return f"/home/hermesman/caldb_update/hlink_logs/{dirname}configs/asic1_id{config_id}.cfg"
 
 
+def email_uplink_to_soc(
+    config_id: int,
+    model: Literal[*SPACECRAFTS_NAMES],
+    remote_asic1_path: str,
+    shell_cmd: str,
+    username: str,
+):
+    email = EmailMessage(
+        subject=f"[HERMES] {model} Automatic CALDB Update - {config_id}",
+        body=f"Hermes Link attempted running a CALDB update.\n\n"
+        f"Configuration file remote path: {remote_asic1_path}\n"
+        f"Script executed: {shell_cmd}\n"
+        f"Username: {username}\n\n"
+        f"This is an automated message from Hermes Link",
+        from_email=settings.EMAIL_HOST_USER,
+        to=contacts.EMAILS_SOC,
+    )
+    try:
+        email.send()
+    except Exception as e:
+        return log_error_and_notify_admin(
+            logging.WARNING,
+            f"An unexpected error occurred during CALDB update notification email delivery: {e}",
+            "email_uplink_to_soc",
+            config_id,
+        )
+    logger.info(f"CALDB update notification email sent for configuration {config_id}.")
+    return
+
+
 @shared_task(
     bind=True,
     autoretry_for=(ssh_exception.SSHException, TimeoutError,),
@@ -95,8 +169,12 @@ def ssh_update_caldb(
     if password is None:
         password = os.environ.get("SSH_HERMESPROC1_PASSWORD")
     if not (host and username and password):
-        logger.error("SSH credentials missing.")
-        raise ValueError("SSH credentials missing.")
+        return log_error_and_notify_admin(
+            logging.WARNING,
+            "SSH credentials missing.",
+            "ssh_update_caldb",
+            config_id,
+        )
 
     if dryrun is None:
         dryrun = bool(int(os.environ.get("SSH_HERMESPROC1_DRYRUN", default="1")))
@@ -104,16 +182,26 @@ def ssh_update_caldb(
     try:
         config = Configuration.objects.get(pk=config_id)
     except Configuration.DoesNotExist:
-        logger.error(f"Configuration {config_id} does not exist.")
-        raise
-
+        return log_error_and_notify_admin(
+            logging.WARNING,
+            f"Configuration {config_id} does not exist.",
+            "ssh_update_caldb",
+            config_id,
+        )
     if not config.uplink_time:
-        logger.warning(f"Configuration {config_id} has not been uplinked.")
-        raise ValueError("Configuration has not been uplinked.")
-
+        return log_error_and_notify_admin(
+            logging.WARNING,
+            f"Configuration {config_id} has not been uplinked.",
+            "ssh_update_caldb",
+            config_id,
+        )
     if not config.asic1:
-        logger.warning(f"Configuration {config_id} contains no asic1 file.")
-        raise ValueError("Configuration contains no asic1 file.")
+        return log_error_and_notify_admin(
+            logging.WARNING,
+            f"Configuration {config_id} contains no asic1 file.",
+            "ssh_update_caldb",
+            config_id,
+        )
 
     with paramiko.SSHClient() as ssh:
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -125,8 +213,12 @@ def ssh_update_caldb(
             ssh_exception.NoValidConnectionsError,
             socket_error,
         ) as e:
-            logger.error(f"SSH connection failed: {e}")
-            raise
+            return log_error_and_notify_admin(
+                logging.WARNING,
+                 f"SSH connection failed: {e}",
+                "ssh_update_caldb",
+                config_id,
+            )
 
         # we transfer the asic1.cfg file
         remote_asic1_path = parse_remote_asic1_path(config_id, dryrun=dryrun)
@@ -139,8 +231,12 @@ def ssh_update_caldb(
                 confirm=True,
             )
         except Exception as e:
-            logger.error(f"SFTP transfer of asic1 file from configuration {config_id} failed: {e}")
-            raise
+            return log_error_and_notify_admin(
+                logging.WARNING,
+                 f"SFTP transfer of asic1 file from configuration {config_id} failed: {e}",
+                "ssh_update_caldb",
+                config_id,
+            )
         finally:
             if sftp:
                 sftp.close()
@@ -153,15 +249,19 @@ def ssh_update_caldb(
             model=config.model,
             dryrun=dryrun,
         )
-        # exec_command only raises SSHException, which we are catching at task level
         try:
+            # exec_command only raises SSHException, which we are retrying via celery
             _ = ssh.exec_command(shell_cmd)
         except Exception as e:
-            logger.error(f"Execution of caldb update shell command failed: {e}")
-            raise
-        else:
-            logger.info(f"Successfully launched caldb update at {host} for configuration {config_id} (dryrun={dryrun}).")
-        return
+            return log_error_and_notify_admin(
+                logging.WARNING,
+                 f"Execution of caldb update shell command failed: {e}",
+                "ssh_update_caldb",
+                config_id,
+            )
+
+        logger.info(f"Successfully launched caldb update at {host} for configuration {config_id} (dryrun={dryrun}).")
+        return email_uplink_to_soc(config_id, config.model, remote_asic1_path, shell_cmd, username)
 
 
 @shared_task(
@@ -171,11 +271,10 @@ def ssh_update_caldb(
     retry_kwargs={"max_retries": 5},
     retry_jitter=True,
 )
-def send_config_email(
+def email_config_to_moc(
     self,
     config_id: int,
     cc: list[str],
-    recipients: list[str],
     domain: str,
     protocol: str,
 ):
@@ -215,7 +314,7 @@ def send_config_email(
                 body=email_body,
                 from_email=settings.EMAIL_HOST_USER,
                 cc=cc,
-                to=recipients,
+                to=contacts.EMAILS_MOC,
             )
             dirname = f"{config.filestring()}"
             archive_content = write_archive(config, "zip", dirname=dirname)
@@ -230,11 +329,19 @@ def send_config_email(
             return
 
     except Configuration.DoesNotExist:
-        logger.error(f"Configuration {config_id} not found")
-        return
+        return log_error_and_notify_admin(
+            logging.WARNING,
+            f"Configuration {config_id} not found",
+            "email_config_to_moc",
+            config_id,
+        )
     except Exception as e:
-        logger.error(f"Unexpected error for config {config_id}: {str(e)}")
-        return
+        return log_error_and_notify_admin(
+            logging.WARNING,
+            f"Unexpected attempting to send config {config_id}: {str(e)}",
+            "email_config_to_moc",
+            config_id,
+        )
 
 
 @shared_task
