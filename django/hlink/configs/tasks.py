@@ -52,8 +52,13 @@ def email_error_to_admin(
             to=contacts.EMAILS_ADMIN,
         )
         email.send()
+    except SMTPException:
+        logger.error(f"Failed to send admin error notification: {email}")
+        return
     except Exception as e:
-        logger.error(f"Failed to send admin error notification: {e}")
+        logger.error(f"An unexpected error occurred trying to submit admin email notification: {e}")
+        return
+
     logger.info(f"Admin error notification sent for {task_name}" +
                 (f", config {config_id}" if config_id else ""))
     return
@@ -127,6 +132,9 @@ def email_uplink_to_soc(
     )
     try:
         email.send()
+    except SMTPException:
+        logging.error(f"Failed to send CALDB update email notification: {email}")
+        return
     except Exception as e:
         return log_error_and_notify_admin(
             logging.WARNING,
@@ -335,6 +343,9 @@ def email_config_to_moc(
             "email_config_to_moc",
             config_id,
         )
+    except SMTPException:
+        logger.warning(f"SMTP error sending email for config {config_id}, will retry")
+        raise  # re-raise so Celery sees it
     except Exception as e:
         return log_error_and_notify_admin(
             logging.WARNING,
