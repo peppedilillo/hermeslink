@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hermes Link - Login</title>
+  <link rel="stylesheet" href="/static/css/output.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+
+<body class="min-h-screen bg-black text-white font-sans">
+  {% load accounts_extras %}
+
+  <div class="flex flex-col min-h-screen justify-center items-center">
+    <div class="justify-start">
+      <h1 class="text-6xl font-extrabold pb-4">HL</h1>
+      <div class="space-y-4 pb-4">
+        <div class="text-4xl font-extrabold">429: Too many requests</div>
+        <div>Please try again later.</div>
+      </div>
+      <div class="text-right text-base-500 hover:text-white transition-colors duration-200 "><a href="{% url 'main:index' %}"> <i class="bi bi-arrow-left"></i> Back to homepage</a></div>
+    </div>
+  </div>
+</body>
+</html>

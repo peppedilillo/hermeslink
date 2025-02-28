@@ -2,7 +2,6 @@ services:
   web:
     env_file:
       - .django.env
-      - .celery.env
       - .postgres.env
       - .influxdb.env
       - .ssh.env
@@ -10,6 +9,8 @@ services:
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
+      - CACHE_HOST=redis
+      - CACHE_PORT=6379
     build: django/hlink
     command: >
       sh -c "python manage.py makemigrations &&
@@ -31,6 +32,8 @@ services:
 
   redis:
     image: redis:7-alpine
+    expose:
+      - 6379
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 1s
@@ -54,10 +57,10 @@ services:
       start_period: 1s
 
   flower:
-    env_file:
-      - .celery.env
     environment:
-      TZ: Europe/Rome
+      - TZ=Europe/Rome
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
     image: mher/flower
     container_name: flower
     command: celery flower

@@ -5,5 +5,6 @@ gunicorn==23.0.0
 celery==5.4.0
 redis==5.2.1
 django-celery-beat==2.7.0
+django-ipware==7.0.1
 influxdb-client==1.48.0
 paramiko==3.5.1

@@ -15,7 +15,6 @@ services:
   web:
     env_file:
       - .django.env.prod
-      - .celery.env.prod
       - .postgres.env.prod
       - .influxdb.env
       - .ssh.env
@@ -23,6 +22,8 @@ services:
     environment:
       - DB_HOST=postgres
       - DB_PORT=5432
+      - CACHE_HOST=redis
+      - CACHE_PORT=6379
     build: 
       context: django/hlink
       dockerfile: Dockerfile.prod
@@ -48,6 +49,8 @@ services:
 
   redis:
     image: redis:7-alpine
+    expose:
+      - 6379
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 2s
