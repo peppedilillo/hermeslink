@@ -1,9 +1,9 @@
-import os
 import logging
+import os
 
+from configs.validators import parse_multiple_emails
+from configs.validators import validate_multiple_emails
 from django.core.exceptions import ValidationError
-
-from configs.validators import parse_multiple_emails, validate_multiple_emails
 
 logger = logging.getLogger(__name__)
 

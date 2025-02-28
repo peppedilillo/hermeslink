@@ -10,11 +10,13 @@ FORM TESTS:
 * Test email submit form validation including CC field formatting
 """
 
+from unittest.mock import patch
+
 from configs.forms import SubmitConfiguration
 from configs.forms import UploadConfiguration
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
-from unittest.mock import patch
+
 
 class ConfigurationFormTest(TestCase):
     @classmethod

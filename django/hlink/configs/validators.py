@@ -4,7 +4,6 @@ from typing import Literal
 
 from django.core.exceptions import ValidationError
 from django.core.validators import EmailValidator
-
 import hermes
 from hermes.configs import bytest_to_bitdict_asic
 from hermes.configs import parse_bitdict_asic

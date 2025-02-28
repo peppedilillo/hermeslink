@@ -1,48 +1,50 @@
+from datetime import datetime
+from io import BytesIO
 import logging
 import os
-from io import BytesIO
-from socket import error as socket_error
 from smtplib import SMTPException
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from socket import error as socket_error
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 from celery import shared_task
-
 from configs.downloads import write_archive
 from configs.models import Configuration
 from django.core.mail import EmailMessage
 from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
+from hermes import CONFIG_SIZE
+from hermes import SPACECRAFTS_NAMES
 from influxdb_client import InfluxDBClient
 from influxdb_client import Point
 from influxdb_client.client.write_api import SYNCHRONOUS
 import paramiko
 from paramiko import ssh_exception
 
-from hermes import CONFIG_SIZE, SPACECRAFTS_NAMES
-from hlink import settings
 from hlink import contacts
+from hlink import settings
 
 logger = logging.getLogger(__name__)
 
 
 def email_error_to_admin(
-        error_message: str,
-        task_name: str,
-        config_id: int | None = None,
+    error_message: str,
+    task_name: str,
+    config_id: int | None = None,
 ):
     """
     Sends an error notification email to administrators.
     """
     subject = f"[HERMES] ERROR: {task_name}" + (f" - Config #{config_id}" if config_id else "")
 
-    body = (f"Task: {task_name}\n"
-            f"Error: {error_message}\n"
-            f"Config ID: {config_id if config_id else 'N/A'}\n"
-            f"Time: {timezone.now()}\n\n"
-            f"This is an automated message from Hermes Link.")
+    body = (
+        f"Task: {task_name}\n"
+        f"Error: {error_message}\n"
+        f"Config ID: {config_id if config_id else 'N/A'}\n"
+        f"Time: {timezone.now()}\n\n"
+        f"This is an automated message from Hermes Link."
+    )
 
     try:
         email = EmailMessage(
@@ -59,16 +61,15 @@ def email_error_to_admin(
         logger.error(f"An unexpected error occurred trying to submit admin email notification: {e}")
         return
 
-    logger.info(f"Admin error notification sent for {task_name}" +
-                (f", config {config_id}" if config_id else ""))
+    logger.info(f"Admin error notification sent for {task_name}" + (f", config {config_id}" if config_id else ""))
     return
 
 
 def log_error_and_notify_admin(
-        level: int,
-        error_message: str,
-        task_name: str,
-        config_id: int | None = None,
+    level: int,
+    error_message: str,
+    task_name: str,
+    config_id: int | None = None,
 ):
     """
     Simple utility wrapper to admin notification email.
@@ -78,11 +79,11 @@ def log_error_and_notify_admin(
 
 
 def parse_update_caldb_command(
-        filepath: str,
-        config_id: int,
-        dt: datetime,
-        model: Literal[*SPACECRAFTS_NAMES],
-        dryrun: bool,
+    filepath: str,
+    config_id: int,
+    dt: datetime,
+    model: Literal[*SPACECRAFTS_NAMES],
+    dryrun: bool,
 ) -> str:
     """
     Helper method.
@@ -96,14 +97,19 @@ def parse_update_caldb_command(
 
     datetime_arg_str = dt.astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%d %H:%M:%S.000")
     datetime_fname_str = datetime_arg_str.replace(" ", "_").replace(".", "dot")
-    out_filename = f"caldb_update/hlink_logs/{dirname}out_{model}_{datetime_fname_str}_{flag_update_caldb}_id{config_id}.log"
-    err_filename = f"caldb_update/hlink_logs/{dirname}err_{model}_{datetime_fname_str}_{flag_update_caldb}_id{config_id}.log"
+    out_filename = (
+        f"caldb_update/hlink_logs/{dirname}out_{model}_{datetime_fname_str}_{flag_update_caldb}_id{config_id}.log"
+    )
+    err_filename = (
+        f"caldb_update/hlink_logs/{dirname}err_{model}_{datetime_fname_str}_{flag_update_caldb}_id{config_id}.log"
+    )
     command = f"./caldb_update/asic2caldb {filepath} {model} {datetime_arg_str} {flag_update_caldb} 1>{out_filename} 2>{err_filename} &"
     return command
 
+
 def parse_remote_asic1_path(
-        config_id: int,
-        dryrun: bool,
+    config_id: int,
+    dryrun: bool,
 ):
     """
     Helper method.
@@ -148,7 +154,10 @@ def email_uplink_to_soc(
 
 @shared_task(
     bind=True,
-    autoretry_for=(ssh_exception.SSHException, TimeoutError,),
+    autoretry_for=(
+        ssh_exception.SSHException,
+        TimeoutError,
+    ),
     retry_backoff=True,
     retry_kwargs={"max_retries": 5},
     retry_jitter=True,
@@ -157,10 +166,10 @@ def ssh_update_caldb(
     self,
     config_id: int,
     timeout: int = 5,  # seconds
-    host: str | None=None,
-    username: str | None=None,
-    password: str | None=None,
-    dryrun: bool | None=None,
+    host: str | None = None,
+    username: str | None = None,
+    password: str | None = None,
+    dryrun: bool | None = None,
 ):
     """
     Updates the calibration database on a remote server by uploading the ASIC1 configuration
@@ -223,7 +232,7 @@ def ssh_update_caldb(
         ) as e:
             return log_error_and_notify_admin(
                 logging.WARNING,
-                 f"SSH connection failed: {e}",
+                f"SSH connection failed: {e}",
                 "ssh_update_caldb",
                 config_id,
             )
@@ -241,7 +250,7 @@ def ssh_update_caldb(
         except Exception as e:
             return log_error_and_notify_admin(
                 logging.WARNING,
-                 f"SFTP transfer of asic1 file from configuration {config_id} failed: {e}",
+                f"SFTP transfer of asic1 file from configuration {config_id} failed: {e}",
                 "ssh_update_caldb",
                 config_id,
             )
@@ -263,7 +272,7 @@ def ssh_update_caldb(
         except Exception as e:
             return log_error_and_notify_admin(
                 logging.WARNING,
-                 f"Execution of caldb update shell command failed: {e}",
+                f"Execution of caldb update shell command failed: {e}",
                 "ssh_update_caldb",
                 config_id,
             )

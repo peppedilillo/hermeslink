@@ -1,6 +1,6 @@
+import logging
 import re
 from typing import Literal
-import logging
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
@@ -8,12 +8,12 @@ from django.core.validators import EmailValidator
 from hermes import CONFIG_SIZE
 from hermes import CONFIG_TYPES
 from hlink.contacts import EMAILS_MOC
-from .validators import parse_multiple_emails, validate_multiple_emails
 
 from django import forms
 
 from .models import Configuration
-
+from .validators import parse_multiple_emails
+from .validators import validate_multiple_emails
 
 logger = logging.getLogger(__name__)
 

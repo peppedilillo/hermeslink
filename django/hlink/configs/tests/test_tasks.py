@@ -10,25 +10,24 @@ TASK MODULE TESTS:
 """
 
 import logging
-import unittest
-
 import os
-from unittest.mock import patch, MagicMock
-
-from django.contrib.auth import get_user_model
-from django.core import mail
-from django.test import TestCase, override_settings
-from django.utils import timezone
-from hlink import contacts
+import unittest
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 from configs.models import Configuration
-from configs.tasks import (
-    email_error_to_admin,
-    log_error_and_notify_admin,
-    parse_remote_asic1_path,
-    email_uplink_to_soc,
-    ssh_update_caldb,
-)
+from configs.tasks import email_error_to_admin
+from configs.tasks import email_uplink_to_soc
+from configs.tasks import log_error_and_notify_admin
+from configs.tasks import parse_remote_asic1_path
+from configs.tasks import ssh_update_caldb
+from django.contrib.auth import get_user_model
+from django.core import mail
+from django.test import override_settings
+from django.test import TestCase
+from django.utils import timezone
+
+from hlink import contacts
 
 User = get_user_model()
 
@@ -81,10 +80,8 @@ class TasksTest(TestCase):
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_log_error_and_notify_admin(self):
         """Test error logging and admin notification."""
-        with self.assertLogs(level='WARNING') as cm:
-            log_error_and_notify_admin(
-                logging.WARNING, "Test warning message", "test_task_name", 42
-            )
+        with self.assertLogs(level="WARNING") as cm:
+            log_error_and_notify_admin(logging.WARNING, "Test warning message", "test_task_name", 42)
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
         self.assertTrue(len(email.to) == len(contacts.EMAILS_ADMIN))
@@ -140,8 +137,7 @@ class TasksTest(TestCase):
         self.assertTrue(len(email.to) == len(contacts.EMAILS_SOC))
         self.assertTrue(all(x == y for x, y in zip(email.to, contacts.EMAILS_SOC)))
 
-
-    @patch('configs.tasks.paramiko.SSHClient')
+    @patch("configs.tasks.paramiko.SSHClient")
     def test_ssh_update_caldb(self, mock_ssh_client):
         """Test CALDB update via SSH."""
         # Setup mock SSH client and SFTP
@@ -151,28 +147,28 @@ class TasksTest(TestCase):
         mock_ssh_client.return_value.__enter__.return_value = mock_ssh
 
         # Set environment variables required for the function
-        original_host = os.environ.get('SSH_HERMESPROC1_HOST')
-        original_user = os.environ.get('SSH_HERMESPROC1_USER')
-        original_pass = os.environ.get('SSH_HERMESPROC1_PASSWORD')
+        original_host = os.environ.get("SSH_HERMESPROC1_HOST")
+        original_user = os.environ.get("SSH_HERMESPROC1_USER")
+        original_pass = os.environ.get("SSH_HERMESPROC1_PASSWORD")
 
         try:
-            os.environ['SSH_HERMESPROC1_HOST'] = 'example.com'
-            os.environ['SSH_HERMESPROC1_USER'] = 'testuser'
-            os.environ['SSH_HERMESPROC1_PASSWORD'] = 'testpass'
+            os.environ["SSH_HERMESPROC1_HOST"] = "example.com"
+            os.environ["SSH_HERMESPROC1_USER"] = "testuser"
+            os.environ["SSH_HERMESPROC1_PASSWORD"] = "testpass"
 
             # Call the function with our uplinked config
             with self.settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend"):
                 ssh_update_caldb(self.uplinked_config.id, dryrun=True)
 
             # Check SSH client was connected properly
-            mock_ssh.connect.assert_called_once_with('example.com', username='testuser', password='testpass', timeout=5)
+            mock_ssh.connect.assert_called_once_with("example.com", username="testuser", password="testpass", timeout=5)
 
             # Check SFTP file transfer occurred
             self.assertTrue(mock_sftp.putfo.called)
 
             # Verify the remote path contains the config ID
             _, kwargs = mock_sftp.putfo.call_args_list[0]
-            self.assertIn(f"asic1_id{self.uplinked_config.id}", kwargs['remotepath'])
+            self.assertIn(f"asic1_id{self.uplinked_config.id}", kwargs["remotepath"])
 
             # Check shell command was executed
             self.assertTrue(mock_ssh.exec_command.called)
@@ -184,16 +180,16 @@ class TasksTest(TestCase):
         finally:
             # Restore environment variables
             if original_host:
-                os.environ['SSH_HERMESPROC1_HOST'] = original_host
+                os.environ["SSH_HERMESPROC1_HOST"] = original_host
             else:
-                os.environ.pop('SSH_HERMESPROC1_HOST', None)
+                os.environ.pop("SSH_HERMESPROC1_HOST", None)
 
             if original_user:
-                os.environ['SSH_HERMESPROC1_USER'] = original_user
+                os.environ["SSH_HERMESPROC1_USER"] = original_user
             else:
-                os.environ.pop('SSH_HERMESPROC1_USER', None)
+                os.environ.pop("SSH_HERMESPROC1_USER", None)
 
             if original_pass:
-                os.environ['SSH_HERMESPROC1_PASSWORD'] = original_pass
+                os.environ["SSH_HERMESPROC1_PASSWORD"] = original_pass
             else:
-                os.environ.pop('SSH_HERMESPROC1_PASSWORD', None)
+                os.environ.pop("SSH_HERMESPROC1_PASSWORD", None)

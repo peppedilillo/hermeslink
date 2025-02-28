@@ -4,11 +4,19 @@ from hashlib import sha256
 import logging
 from typing import Literal
 
-from django.core.exceptions import PermissionDenied
-
+from accounts.models import CustomUser
+from configs import forms
 import configs.downloads
+from configs.models import config_to_sha256
+from configs.models import Configuration
+from configs.reports import write_test_report_html
+from configs.tasks import email_config_to_moc
+from configs.tasks import ssh_update_caldb
+from configs.validators import Status
+from configs.validators import validate_configurations
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.http import HttpRequest
@@ -17,15 +25,6 @@ from django.shortcuts import redirect
 from django.shortcuts import render
 from hermes import CONFIG_TYPES
 from hermes import SPACECRAFTS_NAMES
-
-from configs import forms
-from configs.models import Configuration, config_to_sha256
-from configs.reports import write_test_report_html
-from configs.tasks import email_config_to_moc
-from configs.tasks import ssh_update_caldb
-from configs.validators import Status
-from configs.validators import validate_configurations
-from accounts.models import CustomUser
 
 logger = logging.getLogger(__name__)
 

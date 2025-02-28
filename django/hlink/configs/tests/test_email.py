@@ -15,6 +15,7 @@ from io import BytesIO
 from pathlib import Path
 import zipfile
 
+from accounts.models import CustomUser
 from configs.models import Configuration
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -25,9 +26,8 @@ from django.urls import reverse
 from django.utils import timezone
 from hermes import STANDARD_FILENAMES
 from hlink.settings import BASE_DIR
-from hlink import contacts
-from accounts.models import CustomUser
 
+from hlink import contacts
 
 
 def f2c(file: Path):
@@ -40,7 +40,11 @@ class ConfigurationEmailTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         # Create test user
-        cls.user_soc = CustomUser.objects.create_user(username="testuser-soc", password="testpass123", gang=CustomUser.Gang.SOC,)
+        cls.user_soc = CustomUser.objects.create_user(
+            username="testuser-soc",
+            password="testpass123",
+            gang=CustomUser.Gang.SOC,
+        )
 
         # Setup test files - using real configuration files for proper validation
         cls.files_fm6 = {

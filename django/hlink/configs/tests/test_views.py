@@ -38,25 +38,25 @@ DOWNLOAD VIEW TEST
 
 from io import BytesIO
 from pathlib import Path
-import unittest
 import tarfile
-import zipfile
 from time import sleep
+import unittest
+import zipfile
 
+from accounts.models import CustomUser
 from configs.forms import CommitConfiguration
 from configs.forms import UploadConfiguration
 from configs.models import Configuration
 from configs.validators import Status
 from configs.views import decode_config_data
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, override_settings
+from django.test import Client
+from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from hermes import CONFIG_TYPES
 from hlink.settings import BASE_DIR
-from accounts.models import CustomUser
-
 
 
 def f2c(file: Path):
@@ -296,7 +296,6 @@ class ConfigurationViewTest(TestCase):
             self.assertIn("config_model", self.client.session)
             self.assertIn("config_data", self.client.session)
             self.assertIn("config_hash", self.client.session)
-
 
     @unittest.skip
     def test_upload_view_post_permutation_file_success(self):
