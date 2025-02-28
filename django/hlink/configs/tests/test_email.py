@@ -16,19 +16,18 @@ from pathlib import Path
 import zipfile
 
 from configs.models import Configuration
-from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
 from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 from hermes import STANDARD_FILENAMES
 from hlink.settings import BASE_DIR
 from hlink import contacts
+from accounts.models import CustomUser
 
-
-User = get_user_model()
 
 
 def f2c(file: Path):
@@ -41,7 +40,7 @@ class ConfigurationEmailTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         # Create test user
-        cls.user = User.objects.create_user(username="testuser", password="testpass123")
+        cls.user_soc = CustomUser.objects.create_user(username="testuser-soc", password="testpass123", gang=CustomUser.Gang.SOC,)
 
         # Setup test files - using real configuration files for proper validation
         cls.files_fm6 = {
@@ -69,7 +68,7 @@ class ConfigurationEmailTest(TestCase):
 
     def setUp(self):
         self.client = Client()
-        self.client.login(username="testuser", password="testpass123")
+        self.client.login(username="testuser-soc", password="testpass123")
         # Clear the test outbox
         mail.outbox = []
 
@@ -151,7 +150,7 @@ class ConfigurationEmailTest(TestCase):
         self.assertTrue(config.submitted)
         self.assertIsNotNone(config.submit_time)
         self.assertEqual(config.model, "H6")
-        self.assertEqual(config.author, self.user)
+        self.assertEqual(config.author, self.user_soc)
 
         # Verify file contents
         for file_type in ["acq", "acq0", "asic0", "asic1", "bee"]:
@@ -181,3 +180,46 @@ class ConfigurationEmailTest(TestCase):
         self.assertIsNone(getattr(config, "acq0"))
         self.assertIsNone(getattr(config, "asic0"))
         self.assertIsNone(getattr(config, "asic1"))
+
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_no_asic1_no_soc_notification_mail(self):
+        """Test that configurations without asic1 don't trigger SOC notification emails"""
+        # Upload just the acq file (no asic1)
+        files_fm6 = {
+            "acq": SimpleUploadedFile(
+                name="acq.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/acq_FM6.cfg"),
+            ),
+        }
+        self.assertEqual(Configuration.objects.filter(model="H6").count(), 0)
+
+        self.client.post(reverse("configs:upload"), data={"model": "H6", **files_fm6}, follow=True)
+        self.client.get(reverse("configs:test"))
+        self.assertEqual(Configuration.objects.filter(model="H6").count(), 0)
+
+        response = self.client.post(reverse("configs:submit"))
+        config = Configuration.objects.filter(model="H6").first()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertTrue(any(recipient in contacts.EMAILS_MOC for recipient in mail.outbox[0].to))
+        self.assertEqual(Configuration.objects.filter(model="H6").count(), 1)
+        self.assertIsNotNone(config)
+        self.assertIsNone(config.asic1)
+
+        self.client.logout()
+
+        config.submit_time = timezone.now() - timezone.timedelta(days=1)
+        config.save()
+
+        CustomUser.objects.create_user(username="testuser-moc", password="testpass123", gang=CustomUser.Gang.MOC)
+        client_moc = Client()
+        client_moc.login(username="testuser-moc", password="testpass123")
+        response = client_moc.post(
+            reverse("configs:commit", args=[config.id]),
+            {"uplink_time": timezone.now().strftime("%Y-%m-%dT%H:%M:%SZ")},
+        )
+        config.refresh_from_db()
+        self.assertTrue(config.uplinked)
+        self.assertIsNotNone(config.uplink_time)
+        self.assertEqual(len(mail.outbox), 1)

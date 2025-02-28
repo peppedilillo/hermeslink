@@ -19,6 +19,7 @@ CONFIGURATION VIEWS TESTS:
 * Test file content preservation throughout the process
 * Test session cleanup after submit
 * Test session expiration at logout
+* MOC user can't submit configurations
 
 UPLINK TIMESTAMP VIEW TEST:
 
@@ -26,6 +27,7 @@ UPLINK TIMESTAMP VIEW TEST:
 * Valid timestamps go through
 * Invalid timestamps don't
 * Test against configurations already timestamped, or non existent
+* SOC user can't commit uplink time
 
 DOWNLOAD VIEW TEST
 
@@ -39,22 +41,22 @@ from pathlib import Path
 import unittest
 import tarfile
 import zipfile
+from time import sleep
 
 from configs.forms import CommitConfiguration
 from configs.forms import UploadConfiguration
 from configs.models import Configuration
 from configs.validators import Status
 from configs.views import decode_config_data
-from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client
+from django.test import Client, override_settings
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from hermes import CONFIG_TYPES
 from hlink.settings import BASE_DIR
+from accounts.models import CustomUser
 
-User = get_user_model()
 
 
 def f2c(file: Path):
@@ -66,7 +68,7 @@ def f2c(file: Path):
 class ConfigurationViewTest(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create_user(username="testuser", password="testpass123")
+        cls.user = CustomUser.objects.create_user(username="testuser", password="testpass123", gang=CustomUser.Gang.SOC)
 
         cls.valid_len_acq_data = 20  # bytes
         cls.valid_len_asic_data = 124
@@ -489,12 +491,27 @@ class ConfigurationViewTest(TestCase):
         session_data = self.client.session["config_data"]
         self.assertEqual(tuple(session_data.keys()), CONFIG_TYPES)
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    def test_moc_user_cannot_submit(self):
+        """MOC user attempting to submit a config is forbidden"""
+        user = CustomUser.objects.create_user(username="testuser-moc", password="testpass123", gang=CustomUser.Gang.MOC)
+        self.client = Client()
+        self.client.login(username="testuser-moc", password="testpass123")
 
-class CommitViewTest(TestCase):
+        response = self.client.post(reverse("configs:upload"), data={"model": "H6", **self.files_fm6}, follow=True)
+        self.client.get(reverse("configs:test"))
+        response = self.client.get(reverse("configs:submit"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "configs/submit.html")
+        response = self.client.post(reverse("configs:submit"))
+        self.assertEqual(response.status_code, 403)
+
+
+class UplinkViewTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         # Create test user
-        cls.user = User.objects.create_user(username="testuser", password="testpass123")
+        cls.user = CustomUser.objects.create_user(username="testuser", password="testpass123", gang=CustomUser.Gang.MOC)
 
         # Create base configuration data
         cls.valid_config_data = {
@@ -578,7 +595,7 @@ class CommitViewTest(TestCase):
         uplink_time = self.config.submit_time - timezone.timedelta(hours=1)
         response = self.client.post(
             reverse("configs:commit", args=[self.config.id]),
-            {"uplink_time": uplink_time.strftime("%Y-%m-%dT%H:%M:%S")},
+            {"uplink_time": uplink_time.strftime("%Y-%m-%dT%H:%M:%SZ")},
         )
         self.assertEqual(response.status_code, 200)
         self.assertFalse(self.config.uplinked)
@@ -586,10 +603,10 @@ class CommitViewTest(TestCase):
 
     def test_commit_view_time_in_future(self):
         """Test commit with uplink time before submit time"""
-        uplink_time = self.config.submit_time + timezone.timedelta(hours=1)
+        uplink_time = timezone.now() + timezone.timedelta(hours=1)
         response = self.client.post(
             reverse("configs:commit", args=[self.config.id]),
-            {"uplink_time": uplink_time.strftime("%Y-%m-%dT%H:%M:%S")},
+            {"uplink_time": uplink_time.strftime("%Y-%m-%dT%H:%M:%SZ")},
         )
         self.assertEqual(response.status_code, 200)
         self.assertFalse(self.config.uplinked)
@@ -609,11 +626,46 @@ class CommitViewTest(TestCase):
         response = self.client.get(reverse("configs:commit", args=[self.config.id]))
         self.assertEqual(response.status_code, 403)
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    def test_soc_user_cannot_uplink(self):
+        """SOC user attempting to commit a uplink time is forbidden"""
+        files_fm6 = {
+            "asic1": SimpleUploadedFile(
+                name="asic1.cfg",
+                content=f2c(BASE_DIR / "configs/tests/configs_fm6/asic1_FM6_thr105.cfg"),
+            ),
+        }
+
+        user = CustomUser.objects.create_user(username="testuser-soc", password="testpass123", gang=CustomUser.Gang.SOC)
+        self.client = Client()
+        self.client.login(username="testuser-soc", password="testpass123")
+
+        response = self.client.post(reverse("configs:upload"), data={"model": "H6", **files_fm6}, follow=True)
+        self.client.get(reverse("configs:test"))
+        response = self.client.get(reverse("configs:submit"))
+        self.assertEqual(response.status_code, 200)
+
+        self.assertTemplateUsed(response, "configs/submit.html")
+        response = self.client.post(reverse("configs:submit"))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "configs/submit_success.html")
+
+        config = Configuration.objects.last()
+        config.submit_time = timezone.now() - timezone.timedelta(hours=1)
+        config.save()
+
+        response = self.client.post(
+            reverse("configs:commit", args=[config.id]),
+            {"uplink_time": timezone.now().strftime("%Y-%m-%dT%H:%M:%SZ")},
+            follow=True,
+        )
+        self.assertEqual(response.status_code, 403)
+
 
 class DownloadViewTest(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create_user(username="testuser", password="testpass123")
+        cls.user = CustomUser.objects.create_user(username="testuser", password="testpass123")
 
         # Create base configuration data
         cls.config_data = {
@@ -692,7 +744,7 @@ class DownloadViewTest(TestCase):
 class IndexViewsTest(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create_user(username="testuser", password="testpass123")
+        cls.user = CustomUser.objects.create_user(username="testuser", password="testpass123")
 
         # Create a few simple configurations for testing
         base_time = timezone.now() - timezone.timedelta(days=5)

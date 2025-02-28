@@ -3,5 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 
 from .models import CustomUser
 
-# Register your models here.
+UserAdmin.fieldsets += (('Gang', {'fields': ('gang',)}),)
+UserAdmin.add_fieldsets[0][1]['fields'] += ('gang',)
+
 admin.site.register(CustomUser, UserAdmin)

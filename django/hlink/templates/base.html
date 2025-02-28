@@ -9,8 +9,10 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 
-{% load static %}
 <body class="min-h-screen bg-black text-white font-sans flex flex-col">
+  {% load static %}
+  {% load accounts_extras %}
+  
   <div class="max-w-6xl w-full mx-auto px-16 flex-grow flex flex-col">
     <!-- Navbar -->
     <nav class="w-full py-4 ">
@@ -20,8 +22,8 @@
           </a>
           <div class="flex gap-2">
               {% if user.is_authenticated %}
-                  <span>{{ user.get_username }}</span>
-                  <a href="{% url 'accounts:logout' %}" class="text-gray-600 hover:text-red-500 transition-colors duration-200">logout</a>
+                  <span class="text-{{ user.gang | gang_color }}-500 font-bold">{{ user.get_username }}</span>
+                  <a href="{% url 'accounts:logout' %}" class="text-gray-600 hover:text-white transition-colors duration-200">logout</a>
               {% else %}
                 <a href="{% url 'login' %}" class="text-white hover:text-blue-500 transition-colors duration-200">login</a>
               {% endif %}

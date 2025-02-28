@@ -4,6 +4,8 @@ from hashlib import sha256
 import logging
 from typing import Literal
 
+from django.core.exceptions import PermissionDenied
+
 import configs.downloads
 from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
@@ -23,11 +25,12 @@ from configs.tasks import email_config_to_moc
 from configs.tasks import ssh_update_caldb
 from configs.validators import Status
 from configs.validators import validate_configurations
+from accounts.models import CustomUser
 
 logger = logging.getLogger(__name__)
 
 
-# in this module we will deal with OrderedDict for bookkeeping the configuration file data.
+# in this module we will deal with OrderedDict for mantaining the configuration file data.
 # this choice is driven by the need of an unambiguous order to keep track of the sha256, which we
 # computed on the concatenated files.
 def encode_config_data(config_data: OrderedDict[str, bytes]) -> dict[str, str]:
@@ -177,6 +180,9 @@ def submit(request: HttpRequest) -> HttpResponse:
         return redirect("configs:test")
 
     if request.method == "POST":
+        if request.user.gang != CustomUser.Gang.SOC and not request.user.is_staff:
+            raise PermissionDenied
+
         form = forms.SubmitConfiguration(request.POST)
         if form.is_valid():
             try:
@@ -284,6 +290,9 @@ def commit(request, config_id: int):
         return HttpResponse("403: Configuration has already been committed", status=403)
 
     if request.method == "POST":
+        if request.user.gang != CustomUser.Gang.MOC and not request.user.is_staff:
+            raise PermissionDenied
+
         form = forms.CommitConfiguration(request.POST, instance=config)
         if form.is_valid():
             config.uplinked = True
