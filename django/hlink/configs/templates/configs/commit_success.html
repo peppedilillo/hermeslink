@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 class="font-bold text-4xl mb-6">Uplink time saved successfully!</h2>
+<p class="mb-4">Your configuration has been updated.</p>
+{% if asic1 %}
+    <p class="mb-8">Since this configuration includes an ASIC1 file, the Science Operation Team has been notified, and an update of the calibration database has been initialized.</p>
+{% else %}
+    <p class="mb-8">This configuration contains no ASIC1 file, hence no update of the calibration database will be performed.</p>
+{% endif %}
+<a href="{% url 'configs:history' %}" class="text-gray-400 hover:text-white transition-colors duration-200">
+    <i class="bi bi-clock-history mr-2"></i> Go to history
+</a>
+{% endblock %}

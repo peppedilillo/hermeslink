@@ -6,10 +6,9 @@
     <p>{{ error }}</p>
 {% endif %}
 
-<h3>What happened?</h3>
-<p>Your configuration files were not submitted due to a technical issue. Your files are still saved temporarily.</p>
-    
-<form method="get" action="{% url 'configs:upload' %}">
-    <button type="submit">Upload new configuration</button>
-</form>
+<h3 class="mb-6">What happened?</h3>
+<p class="mb-8">Your configuration files were not submitted due to a technical issue. Your files are still saved temporarily.</p>
+<a href="{% url 'configs:upload' %}" class="text-gray-400 hover:text-white transition-colors duration-200">
+    <i class="bi bi-cloud-upload mr-2"></i> Try again
+</a>
 {% endblock %}

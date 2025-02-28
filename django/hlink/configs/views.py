@@ -18,13 +18,14 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import transaction, DatabaseError
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.shortcuts import render
 from hermes import CONFIG_TYPES
 from hermes import SPACECRAFTS_NAMES
+from hlink.contacts import EMAILS_ADMIN
 
 logger = logging.getLogger(__name__)
 
@@ -203,7 +204,7 @@ def submit(request: HttpRequest) -> HttpResponse:
             except Exception as e:
                 logger.error(f"Unexpected error submitting email: {str(e)}")
                 return render(request, "configs/submit_error.html", {"error": "An unexpected error occurred"})
-            return render(request, "configs/submit_success.html", {})
+            return render(request, "configs/submit_success.html")
 
     form = forms.SubmitConfiguration()
     return render(
@@ -294,13 +295,17 @@ def commit(request, config_id: int):
 
         form = forms.CommitConfiguration(request.POST, instance=config)
         if form.is_valid():
-            config.uplinked = True
-            config.uplink_time = form.cleaned_data["uplink_time"]
-            form.save()
+            try:
+                config.uplinked = True
+                config.uplink_time = form.cleaned_data["uplink_time"]
+                form.save()
+            except Exception as e:
+                logger.error(f"Unexpected error committing uplink time: {str(e)}")
+                return render(request, "configs/commit_error.html", context={"contact_admin": ", ".join(EMAILS_ADMIN)})
 
             if config.asic1 is not None:
                 ssh_update_caldb.delay(config_id=config_id)
-            return redirect("configs:history")
+            return render(request, "configs/commit_success.html", context={"asic1": config.asic1 is not None})
     else:
         form = forms.CommitConfiguration(instance=config)
 
