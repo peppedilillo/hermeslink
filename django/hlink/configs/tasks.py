@@ -79,10 +79,12 @@ def log_error_and_notify_admin(
 
 
 def parse_update_caldb_command(
-    filepath: str,
+    filepath_asic1: str,
     config_id: int,
     dt: datetime,
     model: Literal[*SPACECRAFTS_NAMES],
+    dirpath_remote_log: str,
+    path_remote_script: str,
     dryrun: bool,
 ) -> str:
     """
@@ -96,19 +98,20 @@ def parse_update_caldb_command(
     dirname = "test/" if dryrun else ""
 
     datetime_arg_str = dt.astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%d %H:%M:%S.000")
-    datetime_fname_str = datetime_arg_str.replace(" ", "_").replace(".", "dot")
-    out_filename = (
-        f"caldb_update/hlink_logs/{dirname}out_{model}_{datetime_fname_str}_{flag_update_caldb}_id{config_id}.log"
-    )
-    err_filename = (
-        f"caldb_update/hlink_logs/{dirname}err_{model}_{datetime_fname_str}_{flag_update_caldb}_id{config_id}.log"
-    )
-    command = f"./caldb_update/asic2caldb {filepath} {model} {datetime_arg_str} {flag_update_caldb} 1>{out_filename} 2>{err_filename} &"
+    datetime_str = datetime_arg_str.replace(" ", "_").replace(".", "dot").replace(":", "")
+    log_filepath = f"{dirpath_remote_log}{dirname}log_{model}_{datetime_str}_{flag_update_caldb}_id{config_id}.log"
+    # the HEADASSNOQUERY and HEADASPROMPT environment variables definition  are necessary to prevent headas
+    # from assuming a terminal it's there for prompts and stuff, while it's not.
+    # see: https://heasarc.gsfc.nasa.gov/lheasoft/scripting.html
+    command = (f"HEADASNOQUERY= "  
+               f"HEADASPROMPT=/dev/null "   
+               f"{path_remote_script} {filepath_asic1} {model} {datetime_arg_str} {flag_update_caldb} >{log_filepath} 2>&1 &")
     return command
 
 
 def parse_remote_asic1_path(
     config_id: int,
+    dirpath_remote_log: str,
     dryrun: bool,
 ):
     """
@@ -116,7 +119,7 @@ def parse_remote_asic1_path(
     Constructs the remote filepath where the ASIC1 configuration will be stored.
     """
     dirname = "test/" if dryrun else ""
-    return f"/home/hermesman/caldb_update/hlink_logs/{dirname}configs/asic1_id{config_id}.cfg"
+    return f"{dirpath_remote_log}{dirname}configs/asic1_id{config_id}.cfg"
 
 
 def email_uplink_to_soc(
@@ -169,6 +172,8 @@ def ssh_update_caldb(
     host: str | None = None,
     username: str | None = None,
     password: str | None = None,
+    path_remote_script: str | None = None,
+    dirpath_remote_log: str | None = None,
     dryrun: bool | None = None,
 ):
     """
@@ -185,7 +190,11 @@ def ssh_update_caldb(
         username = os.environ.get("SSH_HERMESPROC1_USER")
     if password is None:
         password = os.environ.get("SSH_HERMESPROC1_PASSWORD")
-    if not (host and username and password):
+    if path_remote_script is None:
+        path_remote_script = os.environ.get("SSH_HERMESPROC1_PATH_SCRIPT")
+    if dirpath_remote_log is None:
+        dirpath_remote_log = os.environ.get("SSH_HERMESPROC1_PATH_LOGDIR")
+    if not (host and username and password and path_remote_script and dirpath_remote_log):
         return log_error_and_notify_admin(
             logging.WARNING,
             "SSH credentials missing.",
@@ -238,7 +247,7 @@ def ssh_update_caldb(
             )
 
         # we transfer the asic1.cfg file
-        remote_asic1_path = parse_remote_asic1_path(config_id, dryrun=dryrun)
+        remote_asic1_path = parse_remote_asic1_path(config_id, dirpath_remote_log=dirpath_remote_log, dryrun=dryrun)
         try:
             sftp = ssh.open_sftp()
             sftp.putfo(
@@ -260,10 +269,12 @@ def ssh_update_caldb(
 
         # launch caldb update
         shell_cmd = parse_update_caldb_command(
-            filepath=remote_asic1_path,
+            filepath_asic1=remote_asic1_path,
             config_id=config_id,
             dt=config.uplink_time.astimezone(ZoneInfo("UTC")),
             model=config.model,
+            dirpath_remote_log=dirpath_remote_log,
+            path_remote_script=path_remote_script,
             dryrun=dryrun,
         )
         try:
