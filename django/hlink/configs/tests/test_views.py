@@ -563,7 +563,7 @@ class UplinkViewTest(TestCase):
         )
 
         # Check redirect
-        self.assertRedirects(response, reverse("configs:history"))
+        self.assertTemplateUsed(response, "configs/commit_success.html")
 
         # Refresh config from db and verify changes
         self.config.refresh_from_db()
