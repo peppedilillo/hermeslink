@@ -38,10 +38,10 @@ class Configuration(models.Model):
     )
     author = models.ForeignKey(
         to=CustomUser,
-        related_name="configurations",
+        related_name="submitted_configurations",
         on_delete=models.PROTECT,
     )
-    # this field is for when a configuration is first sent to the MOC
+    # these field is for when a configuration is first sent to the MOC
     submitted = models.BooleanField(
         default=False,
     )
@@ -50,7 +50,14 @@ class Configuration(models.Model):
         blank=True,
         validators=[validate_not_future],
     )
-    # this field is for when a configuration is uplink on-board by the MOC
+    # these fields is for when a configuration is uplink on-board by the MOC
+    uplinked_by = models.ForeignKey(
+        to=CustomUser,
+        null=True,
+        blank=True,
+        related_name="uplinked_configurations",
+        on_delete=models.PROTECT,
+    )
     uplinked = models.BooleanField(
         default=False,
     )
@@ -146,6 +153,7 @@ class Configuration(models.Model):
             # their respective time is not. for example, when the datetime is uncertain or if an error
             # occurred with the user timestamping system. on the other hand, a scenario in which
             # the times are known but the flags aren't set should never happen.
+            #
             # CONSTRAINT 3: submit time can't have a value if submitted isn't set
             CheckConstraint(
                 #   equivalent expression:
@@ -166,6 +174,12 @@ class Configuration(models.Model):
                 #   check=Q(submitted=True) | (Q(submitted=False) & Q(uplinked=False)),
                 check=Q(submitted=True) | Q(uplinked=False),
                 name="uplinked_requires_submitted",
+            ),
+            # CONSTRAINT 6: uplinked always come with uplinked_by
+            CheckConstraint(
+                check=(Q(uplinked=False) & Q(uplinked_by__isnull=True) |
+                       Q(uplinked=True) & Q(uplinked_by__isnull=False)),
+                name="uplinked_iff_uplinked_by",
             ),
         ]
 

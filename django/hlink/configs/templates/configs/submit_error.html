@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
 <h2 class="font-bold text-4xl mb-6">Configuration submit failed</h2>
-
 {% if error %}
-    <p>{{ error }}</p>
+    <p class="mb-6">{{ error }}</p>
 {% endif %}
 
-<h3 class="mb-6">What happened?</h3>
-<p class="mb-8">Your configuration files were not submitted due to a technical issue. Your files are still saved temporarily.</p>
+<h3 class="mb-6 text-2xl">What happened?</h3>
+<p class="mb-8">Your configuration files were not submitted due to a technical issue. Your files are still saved temporarily.<br>
+    If this problem persists, contact the administrators at {{ contact_admin }}</p>
 <a href="{% url 'configs:upload' %}" class="text-gray-400 hover:text-white transition-colors duration-200">
     <i class="bi bi-cloud-upload mr-2"></i> Try again
 </a>

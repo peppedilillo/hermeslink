@@ -200,10 +200,24 @@ def submit(request: HttpRequest) -> HttpResponse:
 
             except HashError as e:
                 logger.error(f"Integrity error: {str(e)}")
-                return render(request, "configs/submit_error.html", {"error": "Compromised input integrity."})
+                return render(
+                    request,
+                    "configs/submit_error.html",
+                    {
+                        "error": "Compromised input integrity.",
+                        "contact_admin": ", ".join(EMAILS_ADMIN),
+                    }
+                )
             except Exception as e:
                 logger.error(f"Unexpected error submitting email: {str(e)}")
-                return render(request, "configs/submit_error.html", {"error": "An unexpected error occurred"})
+                return render(
+                    request,
+                    "configs/submit_error.html",
+                    {
+                        "error": "An unexpected error occurred.",
+                        "contact_admin": ", ".join(EMAILS_ADMIN),
+                    },
+                )
             return render(request, "configs/submit_success.html")
 
     form = forms.SubmitConfiguration()
@@ -297,6 +311,7 @@ def commit(request, config_id: int):
         if form.is_valid():
             try:
                 config.uplinked = True
+                config.uplinked_by = request.user
                 config.uplink_time = form.cleaned_data["uplink_time"]
                 form.save()
             except Exception as e:
