@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+
+@theme {
+  --color-soc: var(text-orange-500);
+  --color-moc: var(text-blue-500);
+}
+
 .loading-spin {
   animation: spin 1s linear infinite;
   display: inline-block;

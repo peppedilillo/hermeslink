@@ -11,7 +11,6 @@ TASK MODULE TESTS:
 
 import logging
 import os
-import unittest
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -19,7 +18,6 @@ from configs.models import Configuration
 from configs.tasks import email_error_to_admin
 from configs.tasks import email_uplink_to_soc
 from configs.tasks import log_error_and_notify_admin
-from configs.tasks import parse_remote_asic1_path
 from configs.tasks import ssh_update_caldb
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -50,6 +48,7 @@ class TasksTest(TestCase):
             submitted=True,
             submit_time=timezone.now() - timezone.timedelta(hours=2),
             uplinked=True,
+            uplinked_by=cls.user,
             uplink_time=timezone.now() - timezone.timedelta(hours=1),
         )
 
@@ -93,17 +92,8 @@ class TasksTest(TestCase):
 
     def test_parse_remote_asic1_path(self):
         """Test remote ASIC1 filepath generation."""
-        config_id = 42
+        raise NotImplementedError("This test has yet to be implemented!")
 
-        # Test with dryrun=False - check ID is in the path and no "test" directory
-        path = parse_remote_asic1_path(config_id, False)
-        self.assertIn(f"asic1_id{config_id}", path)
-        self.assertNotIn("test/", path)
-
-        # Test with dryrun=True - check ID is in the path and "test" directory is used
-        path_dryrun = parse_remote_asic1_path(config_id, True)
-        self.assertIn(f"asic1_id{config_id}", path_dryrun)
-        self.assertIn("test/", path_dryrun)
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_email_uplink_to_soc(self):

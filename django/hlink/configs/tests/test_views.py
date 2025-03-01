@@ -55,6 +55,7 @@ from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+from django.test import modify_settings
 from hermes import CONFIG_TYPES
 from hlink.settings import BASE_DIR
 
@@ -287,6 +288,7 @@ class ConfigurationViewTest(TestCase):
         self.assertIn("config_data", self.client.session)
         self.assertIn("config_hash", self.client.session)
 
+    @modify_settings(MIDDLEWARE={"remove": "hlink.middleware.rate_limiter",})
     def test_upload_view_post_single_file_success(self):
         """Test successful file upload"""
         for ftype in ["acq", "acq0", "asic0", "asic1", "bee", "obs", "liktrg"]:
@@ -298,6 +300,7 @@ class ConfigurationViewTest(TestCase):
             self.assertIn("config_hash", self.client.session)
 
     @unittest.skip
+    @modify_settings(MIDDLEWARE={"remove": "hlink.middleware.rate_limiter",})
     def test_upload_view_post_permutation_file_success(self):
         """Testing all remaining combinations of uploads. It's slow."""
         from itertools import combinations
@@ -619,6 +622,7 @@ class UplinkViewTest(TestCase):
     def test_commit_view_already_uplinked(self):
         """Test attempting to commit an already uplinked configuration"""
         self.config.uplinked = True
+        self.config.uplinked_by = self.user
         self.config.uplink_time = timezone.now()
         self.config.save()
 
@@ -766,6 +770,7 @@ class IndexViewsTest(TestCase):
             submitted=True,
             submit_time=base_time - timezone.timedelta(days=1),
             uplinked=True,
+            uplinked_by=cls.user,
             uplink_time=base_time,
             acq=b"x" * 20,
             asic0=b"x" * 124,
@@ -807,6 +812,7 @@ class IndexViewsTest(TestCase):
         """Test pending view with no pending configurations"""
         # Mark all configs as uplinked
         self.submitted_config.uplinked = True
+        self.submitted_config.uplinked_by = self.user
         self.submitted_config.uplink_time = timezone.now()
         self.submitted_config.save()
 

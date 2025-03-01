@@ -14,12 +14,13 @@ EMAIL SUBMIT TESTS:
 from io import BytesIO
 from pathlib import Path
 import zipfile
+from time import sleep
 
 from accounts.models import CustomUser
 from configs.models import Configuration
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client
+from django.test import Client, modify_settings
 from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse
@@ -213,16 +214,22 @@ class ConfigurationEmailTest(TestCase):
 
         self.client.logout()
 
-        config.submit_time = timezone.now() - timezone.timedelta(days=1)
+        past_time = timezone.now() - timezone.timedelta(days=1)
+        config.submit_time = past_time
+        config.date = past_time
         config.save()
+        config.refresh_from_db()
 
         CustomUser.objects.create_user(username="testuser-moc", password="testpass123", gang=CustomUser.Gang.MOC)
         client_moc = Client()
         client_moc.login(username="testuser-moc", password="testpass123")
+        uplink_time = timezone.now() - timezone.timedelta(minutes=1)
         response = client_moc.post(
             reverse("configs:commit", args=[config.id]),
-            {"uplink_time": timezone.now().strftime("%Y-%m-%dT%H:%M:%SZ")},
+            {"uplink_time": uplink_time.strftime("%Y-%m-%dT%H:%M:%SZ")},
         )
+        self.assertTemplateUsed(response, "configs/commit_success.html")
+
         config.refresh_from_db()
         self.assertTrue(config.uplinked)
         self.assertIsNotNone(config.uplink_time)

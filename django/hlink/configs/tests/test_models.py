@@ -135,6 +135,7 @@ class ConfigurationModelTest(TestCase):
         self.valid_config.submit_time = submit_time
         self.valid_config.submitted = True
         self.valid_config.uplink_time = uplink_time
+        self.valid_config.uplinked_by = self.test_user
         self.valid_config.uplinked = True
         self.valid_config.save()
 
@@ -189,9 +190,9 @@ class ConfigurationModelTest(TestCase):
         with self.assertRaises(ValidationError):
             config.full_clean()
 
-        # Fix the constraint violation
         config.submitted = True
         config.uplinked = True
+        config.uplinked_by = self.test_user
         config.full_clean()  # Should not raise an exception
 
     def test_uplinked_implies_submitted(self):
@@ -218,6 +219,7 @@ class ConfigurationModelTest(TestCase):
             submit_time=test_time,
             submitted=True,
             uplink_time=test_time + timezone.timedelta(hours=1),
+            uplinked_by=self.test_user,
             uplinked=True,
         )
         with self.assertRaises(ValidationError):
