@@ -6,40 +6,39 @@
     <div class="space-y-6">
         {% for config in page_obj %}
             <div class="config-entry bg-gray-900 p-4 rounded">
-                <div class="grid grid-cols-15 gap-6 text-sm">
+                <div class="grid grid-cols-12 gap-6 text-sm">
                     <!-- ID and Model columns take less space -->
                     <div class="col-span-1">
-                        <span class="text-gray-400 text-sm">ID</span>
+                        <span class="text-gray-400">ID</span>
                         <p class="font-medium">{{ config.pk }}</p>
                     </div>
-                    <div class="col-span-2">
-                        <span class="text-gray-400 text-sm">Model</span>
+                    <div class="col-span-1">
+                        <span class="text-gray-400">Model</span>
                         <p>{{ config.model }}</p>
                     </div>
-                    <div class="col-span-3 break-words">
-                        <span class="text-gray-400 text-sm">Author</span>
-                        <p class="font-medium">{{ config.author.username|truncatechars:16 }}</p>
+                    <div class="col-span-2">
+                        <span class="text-gray-400">Author</span>
+                        <p class="font-medium break-words">{{ config.author.username|truncatechars:16 }}</p>
                     </div>
                     <div class="col-span-3">
-                        <span class="text-gray-400 text-sm">Submitted</span>
+                        <span class="text-gray-400">Submitted</span>
                         <p>{{ config.submit_time|date:"Y-m-d H:i"|default:"Not submitted" }}</p>
                     </div>
-                    <div class="col-span-3 break-words">
-                        <span class="text-gray-400 text-sm">Uplinked by</span>
+                    <div class="col-span-2">
+                        <span class="text-gray-400">Uplinked by</span>
                         {% if not config.uplinked %}
                             <p> - </p>
                         {% else %}
-                        <p class="font-medium">{{ config.uplinked_by.username|truncatechars:16 }}</p>
+                        <p class="font-medium  break-words">{{ config.uplinked_by.username|truncatechars:16 }}</p>
                         {% endif %}
                     </div>
                     <div class="col-span-3">
-                        <span class="text-gray-400 text-sm">Uplinked</span>
+                        <span class="text-gray-400">Uplinked</span>
                         {% if not config.uplinked %}
                             <p> - </p>
                         {% else %}
                             <p class="text-green-400 font-bold">{{ config.uplink_time|date:"Y-m-d H:i"}}</p>
                         {% endif %}
-
                     </div>
                 </div>
                 <div class="mt-3 pt-3 border-t border-gray-700 flex justify-between">

@@ -182,7 +182,10 @@ cython_debug/
 .DS_Store
 django/dev/
 **/repomix-output.txt
-**/tailwind*
+django/hlink/scripts/tailwind-linux.sh
+django/hlink/scripts/tailwind-macos.sh
+django/hlink/tailwind-linux
+django/hlink/tailwind-macos
 .django.env
 .django.env.prod
 .celery.env
