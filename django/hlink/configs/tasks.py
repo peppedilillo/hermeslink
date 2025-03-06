@@ -25,7 +25,7 @@ from paramiko import ssh_exception
 from hlink import contacts
 from hlink import settings
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("hlink")
 
 
 def email_error_to_admin(
@@ -55,13 +55,13 @@ def email_error_to_admin(
         )
         email.send()
     except SMTPException:
-        logger.error(f"Failed to send admin error notification: {email}")
+        logger.error(f"Failed to send admin error notification: {error_message}")
         return
     except Exception as e:
         logger.error(f"An unexpected error occurred trying to submit admin email notification: {e}")
         return
 
-    logger.info(f"Admin error notification sent for {task_name}" + (f", config {config_id}" if config_id else ""))
+    logger.warning(f"Admin error notification sent for {task_name}" + (f", config {config_id}" if config_id else ""))
     return
 
 
@@ -151,7 +151,7 @@ def email_uplink_to_soc(
             "email_uplink_to_soc",
             config_id,
         )
-    logger.info(f"CALDB update notification email sent for configuration {config_id}.")
+    logger.info(f"Sent an email informing the SOC of a CALDB update for configuration {config_id}.")
     return
 
 
@@ -288,7 +288,7 @@ def ssh_update_caldb(
                 config_id,
             )
 
-        logger.info(f"Successfully launched caldb update at {host} for configuration {config_id} (dryrun={dryrun}).")
+        logger.info(f"Successfully launched CALDB update for configuration {config_id}{' (dryrun)' if dryrun else ''}.")
         return email_uplink_to_soc(config_id, config.model, remote_asic1_path, shell_cmd, username)
 
 
@@ -308,6 +308,7 @@ def email_config_to_moc(
 ):
     """
     Sends an email notification for a configuration that has been submitted.
+
 
     This asynchronous task atomically marks a configuration as submitted and sends
     an email notification to the specified recipients with configuration details and
@@ -353,7 +354,7 @@ def email_config_to_moc(
             config.submitted = True
             config.submit_time = timestamp
             config.save()
-            logger.info(f"Email sent for configuration {config_id} after {self.request.retries} retries")
+            logger.info(f"Sent an email informing the MOC of the submission of configuration {config_id}.")
             return
 
     except Configuration.DoesNotExist:
@@ -374,11 +375,6 @@ def email_config_to_moc(
             config_id,
         )
 
-
-@shared_task
-def test_task():
-    """Task for debugging purposes"""
-    logger.info(f"Test periodic task executed.")
 
 
 @shared_task

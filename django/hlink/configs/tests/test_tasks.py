@@ -79,6 +79,9 @@ class TasksTest(TestCase):
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_log_error_and_notify_admin(self):
         """Test error logging and admin notification."""
+        test_logger = logging.getLogger('hlink')
+        test_logger.setLevel(logging.WARNING)
+
         with self.assertLogs(level="WARNING") as cm:
             log_error_and_notify_admin(logging.WARNING, "Test warning message", "test_task_name", 42)
         self.assertEqual(len(mail.outbox), 1)

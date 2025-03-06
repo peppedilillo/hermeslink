@@ -15,7 +15,7 @@ from .models import Configuration
 from .validators import parse_multiple_emails
 from .validators import validate_multiple_emails
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("hlink")
 
 
 def check_length(

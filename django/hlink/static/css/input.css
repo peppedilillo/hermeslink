@@ -9,7 +9,7 @@
 }
 
 .animate-pulse {
-  animation: pulse 1s infinite;
+  animation: pulse 3s infinite;
 }
 
 .ping {

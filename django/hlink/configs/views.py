@@ -18,7 +18,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db import transaction, DatabaseError
+from django.db import transaction
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.shortcuts import redirect
@@ -27,7 +27,7 @@ from hermes import CONFIG_TYPES
 from hermes import SPACECRAFTS_NAMES
 from hlink.contacts import EMAILS_ADMIN
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("hlink")
 
 
 # in this module we will deal with OrderedDict for mantaining the configuration file data.
@@ -218,6 +218,7 @@ def submit(request: HttpRequest) -> HttpResponse:
                         "contact_admin": ", ".join(EMAILS_ADMIN),
                     },
                 )
+            logger.info(f"A new configuration with id {config.id}) was submitted by user {request.user.username}.")
             return render(request, "configs/submit_success.html")
 
     form = forms.SubmitConfiguration()
@@ -320,6 +321,7 @@ def commit(request, config_id: int):
 
             if config.asic1 is not None:
                 ssh_update_caldb.delay(config_id=config_id)
+            logger.info(f"An uplink time has been committed for configuration {config.id} by {request.user.username}.")
             return render(request, "configs/commit_success.html", context={"asic1": config.asic1 is not None})
     else:
         form = forms.CommitConfiguration(instance=config)

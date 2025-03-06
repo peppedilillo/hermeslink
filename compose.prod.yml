@@ -15,7 +15,7 @@ services:
   web:
     env_file:
       - .django.env.prod
-      - .postgres.env.prod
+      - .postgres.env
       - .influxdb.env
       - .ssh.env
       - .contacts.env
@@ -59,7 +59,7 @@ services:
 
   postgres:
     env_file:
-      - .postgres.env.prod
+      - .postgres.env
     image: postgres:13-alpine
     restart: always
     expose:

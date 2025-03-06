@@ -12,7 +12,32 @@
         In this case, please, let us know at: <i>giuseppe.dilillo@inaf.it</i>, <i>matteo.perri@inaf.it</i> or <i>simonetta.puccetti@asi.ssdc.it</i>.
     </p>
 
-    <p class="mb-6">
-        Have fun and godspeed HERMES!
-    </p>
+    <h2 class="mb-6 font-bold text-2xl ">Latest ops</h2>
+    {% if logs %}
+        <div class="mb-6">
+            <ul class="space-y-1">
+                {% for log, text_color in logs %}
+                    <li class="text-xs font-mono {{ text_color }}">{{ log }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% else %}
+        <p class="text-gray-500 italic mb-6 text-center">No logs available at this time.</p>
+    {% endif %}
+
+    {% if services %}
+    <h2 class="mb-4 font-bold text-2xl">Service status</h2>
+    <div class="mb-2">
+        <ul class="space-x-1">
+            {% for service, status in services.items %}
+                <span>{{ service }}</span>
+                {% if status == True %}
+                    <i class="bi bi-circle-fill text-green-500 animate-pulse"></i>
+                {% else %}
+                    <i class="bi bi-circle-fill text-red-500"></i>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 {% endblock %}

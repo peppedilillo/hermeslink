@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "main",
     "accounts",
     "configs",
+    "logger",
 ]
 
 # p. we do not install the debug toolbar when testing or running in production
@@ -147,8 +148,43 @@ DATABASES = {
         "NAME": os.environ.get("POSTGRES_DB"),
         "USER": os.environ.get("POSTGRES_USER"),
         "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
+    },
+}
+
+DATABASE_ROUTERS = [
+    "hlink.routers.LogRouter",
+]
+
+#p. logging
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        'null': {
+            'class': 'logging.NullHandler',
+            'level': 'INFO',
+        },
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "INFO",
+        },
+        "cache": {
+            "class": "logger.handlers.CacheHandler",
+            "level": "INFO",
+        },
+    },
+    "loggers": {
+        "hlink": {
+            "handlers": ["console", "cache"] if not TESTING else ["null"],
+            "propagate": True,
+            "level": "INFO",
+        },
+        "": {
+            "handlers": ["console"] if not TESTING else ["null"],
+        },
     }
 }
+
 # p. Caches
 CACHE_HOST = os.environ.get('CACHE_HOST')
 CACHE_PORT = os.environ.get('CACHE_PORT')
@@ -201,6 +237,7 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 # p. influx db auth
 INFLUXDB_URL = os.environ.get("INFLUXDB_URL", "http://influxdb2:8086")

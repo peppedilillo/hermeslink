@@ -5,8 +5,6 @@ from configs.validators import parse_multiple_emails
 from configs.validators import validate_multiple_emails
 from django.core.exceptions import ValidationError
 
-logger = logging.getLogger(__name__)
-
 
 def _get_and_validate_emails(env_key: str) -> tuple[str, ...]:
     env_value = os.environ.get(env_key)
