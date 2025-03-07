@@ -2,11 +2,10 @@ services:
   nginx:
     build: ./nginx
     ports:
-      # we will deliver over port 1337.
-      # if you change this port, you should also remember to change
-      # `CSRF_TRUSTED_ORIGINS` in `settings.py`.
-      - 1337:80
+      - 80:80
+      - 443:443
     volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
       - static_volume:/home/app/static/staticfiles
       - media_volume:/home/app/static/mediafiles
     depends_on:
@@ -89,7 +88,8 @@ services:
       start_period: 5s
     volumes:
       - ./influxdb/scripts:/docker-entrypoint-initdb.d
-      - influxdb2-data:/var/lib/influxdb2
+      # the next goes to a bind volume with lot of disk.
+      - ~/data/docker-volumes/hlink/influxdb2:/var/lib/influxdb2
   
   grafana:
     depends_on:
@@ -111,5 +111,4 @@ services:
 volumes:
   static_volume:
   media_volume:
-  influxdb2-data:
   postgres-data:

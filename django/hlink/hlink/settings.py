@@ -207,7 +207,18 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = Path(os.environ.get("MEDIA_DIR"))
 
 # p. sets entrusted csrf urls
-CSRF_TRUSTED_ORIGINS = ["http://localhost:1337"]
+CSRF_TRUSTED_ORIGINS = [
+    "https://hermeslink.ssdc.asi.it",
+    "http://localhost:80",
+    "http://localhost:443",
+]
+
+# p. https settings
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # p. sets login url to index instead of profile page
 LOGIN_REDIRECT_URL = "/"
