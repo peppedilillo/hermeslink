@@ -1,7 +1,9 @@
 import os
 
 from celery import Celery
-import settings
+
+from hlink import settings
+
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "hlink.settings")
 
