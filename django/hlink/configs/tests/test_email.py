@@ -13,14 +13,15 @@ EMAIL SUBMIT TESTS:
 
 from io import BytesIO
 from pathlib import Path
-import zipfile
 from time import sleep
+import zipfile
 
 from accounts.models import CustomUser
 from configs.models import Configuration
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import Client, modify_settings
+from django.test import Client
+from django.test import modify_settings
 from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse

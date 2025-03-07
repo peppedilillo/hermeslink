@@ -31,7 +31,7 @@ def get_request_identifier(request: HttpRequest) -> tuple[str, int, timedelta]:
     ip, is_routable = get_client_ip(request)
     if not ip:
         ip = "unknown"
-    if request.path == '/accounts/login/':
+    if request.path == "/accounts/login/":
         return f"ip:{ip}", LOGIN_LIMIT, LOGIN_PERIOD
     return f"ip:{ip}", ANONYMOUS_LIMIT, PERIOD
 

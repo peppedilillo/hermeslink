@@ -103,9 +103,11 @@ def parse_update_caldb_command(
     # the HEADASSNOQUERY and HEADASPROMPT environment variables definition  are necessary to prevent headas
     # from assuming a terminal it's there for prompts and stuff, while it's not.
     # see: https://heasarc.gsfc.nasa.gov/lheasoft/scripting.html
-    command = (f"HEADASNOQUERY= "  
-               f"HEADASPROMPT=/dev/null "   
-               f"{path_remote_script} {filepath_asic1} {model} {datetime_arg_str} {flag_update_caldb} >{log_filepath} 2>&1 &")
+    command = (
+        f"HEADASNOQUERY= "
+        f"HEADASPROMPT=/dev/null "
+        f"{path_remote_script} {filepath_asic1} {model} {datetime_arg_str} {flag_update_caldb} >{log_filepath} 2>&1 &"
+    )
     return command
 
 
@@ -374,7 +376,6 @@ def email_config_to_moc(
             "email_config_to_moc",
             config_id,
         )
-
 
 
 @shared_task

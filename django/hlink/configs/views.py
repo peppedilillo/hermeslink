@@ -206,7 +206,7 @@ def submit(request: HttpRequest) -> HttpResponse:
                     {
                         "error": "Compromised input integrity.",
                         "contact_admin": ", ".join(EMAILS_ADMIN),
-                    }
+                    },
                 )
             except Exception as e:
                 logger.error(f"Unexpected error submitting email: {str(e)}")

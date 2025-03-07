@@ -1,30 +1,35 @@
+from math import sqrt
+
 from django.contrib.auth.decorators import login_required
 import django.db as db
 from django.shortcuts import render
-from redis import Redis
 from influxdb_client import InfluxDBClient
+from logger.handlers import get_cached_info_logs
+from redis import Redis
+
 from hlink import settings
 
-from math import sqrt
+COLOR_LIST = [
+    c1
+    for cs in [
+        [c] * int(sqrt(i))
+        for i, c in enumerate(
+            [
+                "text-green-200",
+                "text-green-300",
+                "text-green-400",
+                "text-green-500",
+                "text-green-600",
+                "text-green-700",
+                "text-green-800",
+                "text-green-900",
+                "text-green-950",
+            ]
+        )
+    ]
+    for c1 in cs
+]
 
-from logger.handlers import get_cached_info_logs
-
-
-COLOR_LIST = [c1 for cs in [
-    [c] * int(sqrt(i)) for i, c in enumerate(
-        [
-            'text-green-200',
-            'text-green-300',
-            'text-green-400',
-            'text-green-500',
-            'text-green-600',
-            'text-green-700',
-            'text-green-800',
-            'text-green-900',
-            'text-green-950',
-        ]
-    )
-] for c1 in cs]
 
 def greens() -> str:
     for i in range(len(COLOR_LIST)):
@@ -57,13 +62,12 @@ def test_services() -> list[str]:
     # influxdb
     try:
         client = InfluxDBClient(url=settings.INFLUXDB_URL, token=settings.INFLUXDB_TOKEN, org=settings.INFLUXDB_ORG)
-        client.api_client.call_api('/ping', 'GET')
+        client.api_client.call_api("/ping", "GET")
     except Exception:
         results["influxdb"] = False
     else:
         results["influxdb"] = True
     return results
-
 
 
 @login_required
@@ -74,7 +78,7 @@ def index(request):
         request,
         "main/index.html",
         context={
-            "logs": [(log, c) for log, c in  zip(logs, colors)],
+            "logs": [(log, c) for log, c in zip(logs, colors)],
             "services": test_services(),
         },
     )

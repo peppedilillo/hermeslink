@@ -79,7 +79,7 @@ class TasksTest(TestCase):
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_log_error_and_notify_admin(self):
         """Test error logging and admin notification."""
-        test_logger = logging.getLogger('hlink')
+        test_logger = logging.getLogger("hlink")
         test_logger.setLevel(logging.WARNING)
 
         with self.assertLogs(level="WARNING") as cm:
@@ -96,7 +96,6 @@ class TasksTest(TestCase):
     def test_parse_remote_asic1_path(self):
         """Test remote ASIC1 filepath generation."""
         raise NotImplementedError("This test has yet to be implemented!")
-
 
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_email_uplink_to_soc(self):

@@ -1,7 +1,9 @@
 import logging
+
 from django.utils import timezone
-from hlink import settings
 from redis import Redis
+
+from hlink import settings
 
 # we keep infos in a separate queue, these will be disposed to the user
 CACHE_INFO_LOGS = "hlink_cache_info_logs"
@@ -11,13 +13,14 @@ CACHE_LOGS = "hlink_cache_logs"
 CACHE_LOGS_LIMIT = 100
 
 
-
 class CacheHandler(logging.Handler):
     """A log handler towards a database."""
-    def __init__(self,):
+
+    def __init__(
+        self,
+    ):
 
         super(CacheHandler, self).__init__()
-
 
     def emit(self, record):
         redis_default = Redis.from_url(url=settings.CACHES["default"]["LOCATION"])

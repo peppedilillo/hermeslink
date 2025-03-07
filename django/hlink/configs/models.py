@@ -177,8 +177,9 @@ class Configuration(models.Model):
             ),
             # CONSTRAINT 6: uplinked always come with uplinked_by
             CheckConstraint(
-                check=(Q(uplinked=False) & Q(uplinked_by__isnull=True) |
-                       Q(uplinked=True) & Q(uplinked_by__isnull=False)),
+                check=(
+                    Q(uplinked=False) & Q(uplinked_by__isnull=True) | Q(uplinked=True) & Q(uplinked_by__isnull=False)
+                ),
                 name="uplinked_iff_uplinked_by",
             ),
         ]

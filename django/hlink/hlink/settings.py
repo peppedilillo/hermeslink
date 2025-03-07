@@ -155,14 +155,14 @@ DATABASE_ROUTERS = [
     "hlink.routers.LogRouter",
 ]
 
-#p. logging
+# p. logging
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {
-        'null': {
-            'class': 'logging.NullHandler',
-            'level': 'INFO',
+        "null": {
+            "class": "logging.NullHandler",
+            "level": "INFO",
         },
         "console": {
             "class": "logging.StreamHandler",
@@ -182,12 +182,12 @@ LOGGING = {
         "": {
             "handlers": ["console"] if not TESTING else ["null"],
         },
-    }
+    },
 }
 
 # p. Caches
-CACHE_HOST = os.environ.get('CACHE_HOST')
-CACHE_PORT = os.environ.get('CACHE_PORT')
+CACHE_HOST = os.environ.get("CACHE_HOST")
+CACHE_PORT = os.environ.get("CACHE_PORT")
 
 CACHES = {
     "default": {
@@ -215,7 +215,7 @@ CSRF_TRUSTED_ORIGINS = [
 
 # p. https settings
 if not DEBUG:
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

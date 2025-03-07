@@ -51,11 +51,11 @@ from configs.validators import Status
 from configs.views import decode_config_data
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
+from django.test import modify_settings
 from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-from django.test import modify_settings
 from hermes import CONFIG_TYPES
 from hlink.settings import BASE_DIR
 
@@ -288,7 +288,11 @@ class ConfigurationViewTest(TestCase):
         self.assertIn("config_data", self.client.session)
         self.assertIn("config_hash", self.client.session)
 
-    @modify_settings(MIDDLEWARE={"remove": "hlink.middleware.rate_limiter",})
+    @modify_settings(
+        MIDDLEWARE={
+            "remove": "hlink.middleware.rate_limiter",
+        }
+    )
     def test_upload_view_post_single_file_success(self):
         """Test successful file upload"""
         for ftype in ["acq", "acq0", "asic0", "asic1", "bee", "obs", "liktrg"]:
@@ -300,7 +304,11 @@ class ConfigurationViewTest(TestCase):
             self.assertIn("config_hash", self.client.session)
 
     @unittest.skip
-    @modify_settings(MIDDLEWARE={"remove": "hlink.middleware.rate_limiter",})
+    @modify_settings(
+        MIDDLEWARE={
+            "remove": "hlink.middleware.rate_limiter",
+        }
+    )
     def test_upload_view_post_permutation_file_success(self):
         """Testing all remaining combinations of uploads. It's slow."""
         from itertools import combinations
