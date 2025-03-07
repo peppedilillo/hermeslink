@@ -131,7 +131,7 @@
               "type": "influxdb",
               "uid": "${DS_INFLUXDB_V2_FLUX}"
             },
-            "query": "from(bucket: \"test-bucket\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_readings\")\n  |> filter(fn: (r) => r[\"_field\"] == \"temperature\" or r[\"_field\"] == \"humidity\" or r[\"_field\"] == \"pressure\")\n  |> aggregateWindow(every: 1s, fn: mean, createEmpty: false)",
+            "query": "from(bucket: \"hks\")\n  |> range(start: -30m)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"sensor_readings\")\n  |> filter(fn: (r) => r[\"_field\"] == \"temperature\" or r[\"_field\"] == \"humidity\" or r[\"_field\"] == \"pressure\")\n  |> aggregateWindow(every: 1s, fn: mean, createEmpty: false)",
             "refId": "A"
           }
         ],

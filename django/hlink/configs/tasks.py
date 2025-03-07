@@ -387,7 +387,6 @@ def generate_sensor_data():
     from random import uniform
 
     try:
-        # Create InfluxDB client
         client = InfluxDBClient(url=settings.INFLUXDB_URL, token=settings.INFLUXDB_TOKEN, org=settings.INFLUXDB_ORG)
         write_api = client.write_api(write_options=SYNCHRONOUS)
 
