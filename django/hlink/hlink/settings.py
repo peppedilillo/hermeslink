@@ -151,10 +151,6 @@ DATABASES = {
     },
 }
 
-DATABASE_ROUTERS = [
-    "hlink.routers.LogRouter",
-]
-
 # p. logging
 LOGGING = {
     "version": 1,
