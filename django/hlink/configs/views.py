@@ -11,6 +11,9 @@ import configs.downloads
 from configs.models import config_to_sha256
 from configs.models import Configuration
 from configs.reports import write_test_report_html
+from configs.search import interpret_search_query
+from configs.search import InterpreterError
+from configs.search import ParseError
 from configs.tasks import email_config_to_moc
 from configs.tasks import ssh_update_caldb
 from configs.validators import Status
@@ -27,8 +30,6 @@ from django.shortcuts import render
 from hermes import CONFIG_TYPES
 from hermes import SPACECRAFTS_NAMES
 from hlink.contacts import EMAILS_ADMIN
-from configs.search import interpret_search_query
-from configs.search import ParseError, InterpreterError
 
 logger = logging.getLogger("hlink")
 
@@ -299,9 +300,10 @@ def download(request, config_id: int, format: Literal["zip", "tar"] = "zip"):
 
 HISTORY_EMPTY_MESSAGE = "No configuration has been submitted yet."
 
+
 @login_required
 def history(
-        request: HttpRequest,
+    request: HttpRequest,
 ) -> HttpResponse:
     """
     View to display all recorded configurations with search capability.

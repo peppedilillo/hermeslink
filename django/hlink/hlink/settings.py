@@ -178,12 +178,10 @@ LOGGING = {
             "when": "midnight",
             "backupCount": 60,
             "formatter": "standard",
-        }
+        },
     },
     "formatters": {
-        "standard": {
-            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-        },
+        "standard": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
     },
     "loggers": {
         "hlink": {

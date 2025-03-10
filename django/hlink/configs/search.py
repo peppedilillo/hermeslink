@@ -1,9 +1,11 @@
-from enum import Enum, auto
+from abc import ABC
+from abc import abstractmethod
 from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime
+from enum import auto
+from enum import Enum
 import re
-from abc import ABC, abstractmethod
 
 from configs.models import Configuration
 from django.db.models import Q
@@ -20,6 +22,7 @@ def interpret_search_query(query: str):
 
 class TokenType(Enum):
     """Token types for the test report lexer."""
+
     MODEL_H1 = auto()
     MODEL_H2 = auto()
     MODEL_H3 = auto()
@@ -88,36 +91,40 @@ RESERVED_WORDS_CONFIGURATION_NAMES = {
     "obs": TokenType.CONFG_OBS,
 }
 # these are sort of hard-coded. the values should `Configuration` field names
-RESERVED_WORDS_CONFIGURATION_NAMES_INVERSE = {
-    v: k for k, v in RESERVED_WORDS_CONFIGURATION_NAMES.items()
-}
+RESERVED_WORDS_CONFIGURATION_NAMES_INVERSE = {v: k for k, v in RESERVED_WORDS_CONFIGURATION_NAMES.items()}
 
 RESERVED_WORDS = (
-        RESERVED_WORDS_SPACECRAFT_NAMES |
-        RESERVED_WORDS_CONFIGURATION_NAMES | {
-            "uplinked": TokenType.UPLINKED,
-            "submitted": TokenType.SUBMITTED,
-            "by": TokenType.BY,
-            "or": TokenType.OR,
-            "and": TokenType.AND,
-            "not": TokenType.NOT,
-        }
+    RESERVED_WORDS_SPACECRAFT_NAMES
+    | RESERVED_WORDS_CONFIGURATION_NAMES
+    | {
+        "uplinked": TokenType.UPLINKED,
+        "submitted": TokenType.SUBMITTED,
+        "by": TokenType.BY,
+        "or": TokenType.OR,
+        "and": TokenType.AND,
+        "not": TokenType.NOT,
+    }
 )
 
 DATETIME_PATTERNS = OrderedDict(
-    sorted([
-        (r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", 20),
-        (r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$", 19),
-        (r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}Z$", 17),
-        (r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$", 16),
-        (r"^\d{4}-\d{2}-\d{2}$", 10),
-    ], key=lambda x: x[1], reverse=True)
+    sorted(
+        [
+            (r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$", 20),
+            (r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$", 19),
+            (r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}Z$", 17),
+            (r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$", 16),
+            (r"^\d{4}-\d{2}-\d{2}$", 10),
+        ],
+        key=lambda x: x[1],
+        reverse=True,
+    )
 )
 
 
 @dataclass
 class Token:
     """A lexical token with type and content."""
+
     ttype: TokenType
     lexeme: str
 
@@ -152,23 +159,11 @@ class Scanner:
         elif c.isspace():
             pass
         elif c == ">":
-            self._add_token(
-                Token(TokenType.GREATER_EQUAL, ">=")
-                if self._match("=")
-                else Token(TokenType.GREATER, ">")
-            )
+            self._add_token(Token(TokenType.GREATER_EQUAL, ">=") if self._match("=") else Token(TokenType.GREATER, ">"))
         elif c == "<":
-            self._add_token(
-                Token(TokenType.LESSER_EQUAL, "<=")
-                if self._match("=")
-                else Token(TokenType.LESSER, "<")
-            )
+            self._add_token(Token(TokenType.LESSER_EQUAL, "<=") if self._match("=") else Token(TokenType.LESSER, "<"))
         elif c == "!":
-            self._add_token(
-                Token(TokenType.BANG_EQUAL, "!=")
-                if self._match("=")
-                else Token(TokenType.NOT, "!")
-            )
+            self._add_token(Token(TokenType.BANG_EQUAL, "!=") if self._match("=") else Token(TokenType.NOT, "!"))
         elif c.isdigit():
             if dt := self._catch_datetime():
                 self._add_token(Token(TokenType.DATETIME, dt))
@@ -218,7 +213,7 @@ class Scanner:
         """Returns a datetime if it matches an allowd pattern, consuming it.
         Returns the empty string when no match."""
         for pattern, pattern_length in DATETIME_PATTERNS.items():
-            s = self.text[self.current - 1:self.current + pattern_length - 1]
+            s = self.text[self.current - 1 : self.current + pattern_length - 1]
             if re.match(pattern, s):
                 self.current += pattern_length - 1
                 return s
@@ -228,7 +223,7 @@ class Scanner:
         """Returns the next literal, consuming it."""
         while (next_char := self._peek()) and (next_char.isalnum() or next_char in ["_", "."]):
             self._advance()
-        return self.text[self.start:self.current]
+        return self.text[self.start : self.current]
 
     def _add_token(self, token: Token):
         """Adds a token to the token list."""
@@ -237,6 +232,7 @@ class Scanner:
 
 class Expression(ABC):
     """Expression abstract base class implementing a visitor interface"""
+
     @abstractmethod
     def accept(self, visitor):
         pass
@@ -257,6 +253,7 @@ class Binary(Expression):
 
 class Unary(Expression):
     """An unary expression"""
+
     def __init__(self, operator: Token, right: Expression):
         self.operator = operator
         self.right = right
@@ -268,6 +265,7 @@ class Unary(Expression):
 
 class Grouping(Expression):
     """A grouping expression"""
+
     def __init__(self, expression: Expression):
         self.expression = expression
 
@@ -278,6 +276,7 @@ class Grouping(Expression):
 
 class Query(Expression):
     """A query expression"""
+
     def __init__(self, key: Token, operator: Token, value: Token):
         self.key = key
         self.operator = operator
@@ -294,6 +293,7 @@ class ParseError(Exception):
 
 class Parser:
     """An abstract syntax tree parser by recursive descent"""
+
     def __init__(self, tokens: list[Token]):
         self.tokens = tokens
         self.current = 0
@@ -322,7 +322,8 @@ class Parser:
         expr = self._unary()
         # we both implicit and explicit `and`.
         while (matched := self._match({TokenType.AND})) or (
-                not self._at_end() and not self._check({TokenType.OR, TokenType.RIGHT_PAREN})):
+            not self._at_end() and not self._check({TokenType.OR, TokenType.RIGHT_PAREN})
+        ):
             operator = Token(TokenType.AND, matched.lexeme if matched else "_and")
             right = self._unary()
             expr = Binary(expr, operator, right)
@@ -343,20 +344,21 @@ class Parser:
             return Query(self._previous(), Token(TokenType.ISNULL, "_isnull"), Token(TokenType.ISNULL, "_isnull"))
         elif noun := self._match({TokenType.SUBMITTED, TokenType.UPLINKED}):
             if predicate := self._match(
-                    {
-                        TokenType.GREATER,
-                        TokenType.GREATER_EQUAL,
-                        TokenType.LESSER,
-                        TokenType.LESSER_EQUAL,
-                        TokenType.EQUAL,
-                        TokenType.BANG_EQUAL,
-                    }
+                {
+                    TokenType.GREATER,
+                    TokenType.GREATER_EQUAL,
+                    TokenType.LESSER,
+                    TokenType.LESSER_EQUAL,
+                    TokenType.EQUAL,
+                    TokenType.BANG_EQUAL,
+                }
             ):
                 if objective := self._match({TokenType.DATETIME}):
                     return Query(noun, predicate, objective)
                 else:
                     raise ParseError(
-                        f"A valid datetime is expected after '{noun.lexeme} {predicate.lexeme}' expression.")
+                        f"A valid datetime is expected after '{noun.lexeme} {predicate.lexeme}' expression."
+                    )
             elif predicate := self._match({TokenType.BY}):
                 if objective := self._match({TokenType.LITERAL}):
                     return Query(noun, predicate, objective)
@@ -415,6 +417,7 @@ class Parser:
 
 class Printer:
     """An AST printer, for debugging purpose."""
+
     def print(self, expr: Expression):
         return expr.accept(self)
 
@@ -438,6 +441,7 @@ class InterpreterError(Exception):
 
 class Interpreter:
     """Interpret an AST built from query string into a complex query expression."""
+
     def evaluate(self, expr: Expression):
         try:
             return expr.accept(self)
@@ -458,7 +462,7 @@ class Interpreter:
         right = self.evaluate(expr.right)
 
         if expr.operator.ttype == TokenType.NOT:
-            return ~ right
+            return ~right
         raise InterpreterError("Invalid unary expression")
 
     def visit_grouping(self, expr: Grouping):
@@ -485,7 +489,7 @@ class Interpreter:
                 TokenType.LESSER,
                 TokenType.LESSER_EQUAL,
                 TokenType.EQUAL,
-                TokenType.BANG_EQUAL
+                TokenType.BANG_EQUAL,
             }:
                 noun = "submit_time" if expr.key.ttype == TokenType.SUBMITTED else "uplink_time"
                 dt = datetime.fromisoformat(expr.value.lexeme)
@@ -502,7 +506,7 @@ class Interpreter:
                 elif expr.operator.ttype == TokenType.EQUAL:
                     return Q(**{f"{noun}": dt})
                 elif expr.operator.ttype == TokenType.BANG_EQUAL:
-                    return ~ Q(**{f"{noun}": dt})
+                    return ~Q(**{f"{noun}": dt})
 
                 raise InterpreterError("Invalid datetime query")
 
