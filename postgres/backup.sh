@@ -14,7 +14,7 @@ if [ -z "$CONTAINER_NAME" ]; then
 fi
 
 # check container is actually running
-if ! docker ps --format '{{.ID}}' | grep -q "$CONTAINER_NAME"; then
+if ! docker ps --format '{{.ID}}' --no-trunc | grep -q "$CONTAINER_NAME"; then
     echo "ERROR: PostgreSQL container exists but is not running."
     echo "Please start the database container with: docker-compose -f $COMPOSE_FILE up -d postgres"
     exit 1
