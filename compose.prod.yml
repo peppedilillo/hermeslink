@@ -38,6 +38,7 @@ services:
     volumes:
       - static_volume:/home/app/static/staticfiles
       - media_volume:/home/app/static/mediafiles
+      - logs_volume:/home/app/logs
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,4 +112,5 @@ services:
 volumes:
   static_volume:
   media_volume:
+  logs_volume:
   postgres-data:

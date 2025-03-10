@@ -152,6 +152,9 @@ DATABASES = {
 }
 
 # p. logging
+# p. The environment variable `LOG_DIR` is defined in dockerfile.
+LOG_DIR = Path(os.environ.get("LOG_DIR"))
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -168,15 +171,28 @@ LOGGING = {
             "class": "logger.handlers.CacheHandler",
             "level": "INFO",
         },
+        "file": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "level": "INFO",
+            "filename": LOG_DIR / "hlink.log",
+            "when": "midnight",
+            "backupCount": 60,
+            "formatter": "standard",
+        }
+    },
+    "formatters": {
+        "standard": {
+            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        },
     },
     "loggers": {
         "hlink": {
-            "handlers": ["console", "cache"] if not TESTING else ["null"],
-            "propagate": True,
+            "handlers": ["console", "cache", "file"] if not TESTING else ["null"],
             "level": "INFO",
         },
         "": {
-            "handlers": ["console"] if not TESTING else ["null"],
+            "handlers": ["console", "file"] if not TESTING else ["null"],
+            "level": "INFO",
         },
     },
 }

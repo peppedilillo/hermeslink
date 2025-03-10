@@ -30,6 +30,9 @@ RUN mkdir -p $STATIC_DIR
 # and one as well for media files
 ENV MEDIA_DIR=/home/app/static/mediafiles
 RUN mkdir $MEDIA_DIR
+# and one as well for media files
+ENV LOG_DIR=/home/app/logs
+RUN mkdir $LOG_DIR
 
 # we move to the codebase directory
 WORKDIR $APP_HOME

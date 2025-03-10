@@ -12,6 +12,9 @@ RUN mkdir -p $STATIC_DIR
 # and one as well for media files
 ENV MEDIA_DIR=/home/app/static/mediafiles
 RUN mkdir $MEDIA_DIR
+# and one as well for media files
+ENV LOG_DIR=/home/app/logs
+RUN mkdir $LOG_DIR
 # finally, one for the email file-backend
 ENV EMAIL_DIR=/home/app/emails
 RUN mkdir $EMAIL_DIR
