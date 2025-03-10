@@ -194,7 +194,7 @@ class Parser:
 
     def _formatted_hexstring(self, hexstring: str):
         if self.format == "html":
-            intro = f"""{self.lb}<span class="text-gray-500">"""
+            intro = f"""{self.lb}<span class="text-gray-400">"""
             outro = "</span>"
         else:
             intro = f"{self.lb}"

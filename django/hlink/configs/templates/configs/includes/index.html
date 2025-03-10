@@ -60,7 +60,7 @@
 
         <!-- Paginator -->
         {% if page_obj.paginator.num_pages > 1 %}
-            <div class="pagination flex justify-end items-right space-x-2 my-12 text-sm text-gray-500">
+            <div class="pagination flex justify-end items-right space-x-2 my-12 text-sm text-gray-400">
                 {% if page_obj.has_previous %}
                     <a href="?page=1{% if query %}&query={{ query|urlencode }}{% endif %}" class="hover:text-white transition-colors duration-200">&laquo; first</a>
                     <a href="?page={{ page_obj.previous_page_number }}{% if query %}&query={{ query|urlencode }}{% endif %}" class="hover:text-white transition-colors duration-200">previous</a>
