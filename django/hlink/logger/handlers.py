@@ -24,7 +24,7 @@ class CacheHandler(logging.Handler):
 
     def emit(self, record):
         redis_default = Redis.from_url(url=settings.CACHES["default"]["LOCATION"])
-        timestamp = timezone.now().strftime("%Y-%M-%d %H:%m")
+        timestamp = timezone.now().strftime("%Y-%m-%d %H:%M")
 
         if record.levelno == logging.INFO:
             n = redis_default.lpush(CACHE_INFO_LOGS, f"{timestamp}: {record.msg}")

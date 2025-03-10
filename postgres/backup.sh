@@ -1,10 +1,24 @@
 #!/bin/bash
-set -e
+set -eo pipefail
 source /home/dilillo/hermeslink/.postgres.env
 
 BACKUP_DIR=/home/dilillo/hermeslink-backup
 RETENTION_DAYS=14
-CONTAINER_NAME=$(docker compose -f /home/dilillo/hermeslink/compose.prod.yml ps -q postgres)
+COMPOSE_FILE=/home/dilillo/hermeslink/compose.prod.yml
+
+# check if container exists and is running
+CONTAINER_NAME=$(docker-compose -f $COMPOSE_FILE ps -q postgres)
+if [ -z "$CONTAINER_NAME" ]; then
+    echo "ERROR: PostgreSQL container is not defined or not created."
+    exit 1
+fi
+
+# check container is actually running
+if ! docker ps --format '{{.ID}}' | grep -q "$CONTAINER_NAME"; then
+    echo "ERROR: PostgreSQL container exists but is not running."
+    echo "Please start the database container with: docker-compose -f $COMPOSE_FILE up -d postgres"
+    exit 1
+fi
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
