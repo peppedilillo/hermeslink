@@ -4,7 +4,6 @@ from typing import Literal
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
-from django.core.validators import EmailValidator
 from hermes import CONFIG_SIZE
 from hermes import CONFIG_TYPES
 from hlink.contacts import EMAILS_MOC
@@ -99,7 +98,7 @@ class CommitConfiguration(forms.ModelForm):
         ]
         valid_format = any(re.match(pattern, self.data.get("uplink_time")) for pattern in format_patterns)
         if not valid_format:
-            raise forms.ValidationError("UTC timestamp must be in format 'YYYY-MM-DDThh:mm:ssZ'. Mind the 'Z'!")
+            raise forms.ValidationError("UTC timestamp must be in format 'YYYY-MM-DDThh:mm:ssZ'. Mind the 'Z', it means UTC!")
 
         # uplink_time should follow creation date and submit time.
         uplink_time = self.cleaned_data.get("uplink_time")

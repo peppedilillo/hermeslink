@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from email import header
 from functools import partial
 from hashlib import sha256
 import logging
@@ -26,6 +27,8 @@ from django.shortcuts import render
 from hermes import CONFIG_TYPES
 from hermes import SPACECRAFTS_NAMES
 from hlink.contacts import EMAILS_ADMIN
+from configs.search import interpret_search_query
+from configs.search import ParseError, InterpreterError
 
 logger = logging.getLogger("hlink")
 
@@ -230,71 +233,6 @@ def submit(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-def _index(
-    request: HttpRequest,
-    order_by: tuple[str],
-    filter_by: dict,
-    header: str,
-    empty_message: str,
-) -> HttpResponse:
-    """
-    View to display all recorded configurations.
-    """
-    configurations = Configuration.objects.filter(**filter_by).order_by(*order_by)
-    paginator = Paginator(configurations, 10)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
-    return render(
-        request,
-        "configs/index.html",
-        {
-            "page_obj": page_obj,
-            "empty_message": empty_message,
-            "header": header,
-        },
-    )
-
-
-history = partial(
-    _index,
-    header="History",
-    filter_by={},
-    order_by=("-date",),
-    empty_message="No configuration has been uplinked yet.",
-)
-pending = partial(
-    _index,
-    header="Pending",
-    filter_by={"uplinked": False},
-    order_by=("-date",),
-    empty_message="No pending configuration.",
-)
-
-
-@login_required
-def download(request, config_id: int, format: Literal["zip", "tar"] = "zip"):
-    """
-    View function to download a configuration archive.
-    """
-    if format not in ["zip", "tar"]:
-        return HttpResponse("400: Invalid format specified", status=400)
-
-    try:
-        config = Configuration.objects.get(pk=config_id)
-    except Configuration.DoesNotExist:
-        return HttpResponse("404: Configuration not found", status=404)
-
-    archive_content = configs.downloads.write_archive(config, format)
-    filename = f"{config.filestring()}.{'tar.gz' if format == 'tar' else 'zip'}"
-
-    response = HttpResponse(archive_content)
-    response["Content-Type"] = "application/zip" if format == "zip" else "application/x-tar"
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-
-    return response
-
-
-@login_required
 def commit(request, config_id: int):
     try:
         config = Configuration.objects.get(pk=config_id)
@@ -332,5 +270,68 @@ def commit(request, config_id: int):
         {
             "form": form,
             "config": config,
+        },
+    )
+
+
+@login_required
+def download(request, config_id: int, format: Literal["zip", "tar"] = "zip"):
+    """
+    View function to download a configuration archive.
+    """
+    if format not in ["zip", "tar"]:
+        return HttpResponse("400: Invalid format specified", status=400)
+
+    try:
+        config = Configuration.objects.get(pk=config_id)
+    except Configuration.DoesNotExist:
+        return HttpResponse("404: Configuration not found", status=404)
+
+    archive_content = configs.downloads.write_archive(config, format)
+    filename = f"{config.filestring()}.{'tar.gz' if format == 'tar' else 'zip'}"
+
+    response = HttpResponse(archive_content)
+    response["Content-Type"] = "application/zip" if format == "zip" else "application/x-tar"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    return response
+
+
+HISTORY_EMPTY_MESSAGE = "No configuration has been submitted yet."
+
+@login_required
+def history(
+        request: HttpRequest,
+) -> HttpResponse:
+    """
+    View to display all recorded configurations with search capability.
+    """
+    configurations = Configuration.objects.all()
+    query = request.GET.get("query", "")
+    search_error = None
+
+    if query:
+        try:
+            filter_query = interpret_search_query(query)
+            configurations = configurations.filter(filter_query)
+        except (ParseError, InterpreterError) as e:
+            search_error = str(e)
+        print(len(configurations))
+
+    configurations = configurations.order_by(*("-date",))
+
+    paginator = Paginator(configurations, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    return render(
+        request,
+        "configs/history.html",
+        {
+            "page_obj": page_obj,
+            "header": "History",
+            "empty_message": HISTORY_EMPTY_MESSAGE,
+            "query": query,
+            "search_error": search_error,
         },
     )

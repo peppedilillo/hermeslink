@@ -47,6 +47,12 @@
           <span class="font-bold uppercase">Configurations</span>
           <ul class="mt-2 space-y-1">
             <li>
+              <a href="{% url 'configs:history' %}" class="flex items-center p-2 hover:bg-gray-900">
+                <i class="bi bi-search"></i>
+                <span class="ml-3">History</span>
+              </a>
+            </li>
+            <li>
               <a href="{% url 'configs:upload' %}" class="flex items-center p-2 hover:bg-gray-900">
                 <i class="bi bi-cloud-upload"></i>
                 <span class="ml-3">Upload</span>
@@ -96,18 +102,6 @@
             </div>
             {% endif %}
             </li>
-            <li>
-              <a href="{% url 'configs:pending' %}" class="flex items-center p-2 hover:bg-gray-900">
-                <i class="bi bi-rocket-takeoff"></i>
-                <span class="ml-3">Pending</span>
-              </a>
-            </li>
-            <li>
-              <a href="{% url 'configs:history' %}" class="flex items-center p-2 hover:bg-gray-900">
-                <i class="bi bi-clock-history"></i>
-                <span class="ml-3">History</span>
-              </a>
-            </li>
           </ul>
         </div>
 
@@ -123,10 +117,10 @@
     </div>
 
     <!-- Footer -->
-    <footer class="w-full pt-18 pb-6 mt-auto text-xs text-gray-500 text-mono">
+    <footer class="w-full pt-16 pb-6 mt-auto text-xs text-gray-500 text-mono">
       <div class="flex items-center justify-center gap-8 mx-auto">
         <img src="{% static 'pics/logo_H_white.png' %}" class="h-14 object-scale-down">
-          <div class="w-64">Hermes Link is a web application developed at <span class="text-nowrap">ASI-SSDC</span> for the HERMES collaboration by <a href="https://github.com/peppedilillo/">Giuseppe Dilillo</a>.</div>
+              <div class="w-64">Hermes Link is a web application developed at <span class="text-nowrap">ASI-SSDC</span> for the HERMES-Pathfinder collaboration.<a href="https://github.com/peppedilillo/" class="transition-colors duration-300 hover:text-white">~p25</a></div>
         <div class="flex flex-col">
           <a href="https://github.com/peppedilillo/hermeslink" class="transition-colors duration-300 hover:text-white">code</a>
           <a href="https://www.hermes-sp.eu/" class="transition-colors duration-300 hover:text-white">hermes</a>

@@ -4,6 +4,7 @@ module.exports = {
     'templates/*.html',
     'templates/registration/*.html',
     'configs/templates/configs/*.html',
+    'configs/templates/configs/includes/*.html',
     'main/templates/main/*.html',
   ],
   safelist: [

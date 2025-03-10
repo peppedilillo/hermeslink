@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h1 class="font-bold text-4xl mb-8">{{ header }}</h1>
+
+<!-- Search form-->
+<div class="my-6">
+    <form method="get" class="flex flex-row gap-8">
+        <div class="w-full relative flex items-center">
+            <div class="absolute left-3 text-gray-600">
+                <i class="bi bi-search"></i>
+            </div>
+            <input
+              type="text"
+              name="query"
+              class="w-full bg-black text-white placeholder:text-gray-600 p-2 pl-10 rounded-2xl border border-white"
+              placeholder="Search (e.g. 'not uplinked')"
+              value="{{ query }}"
+            >
+        </div>
+    </form>
+
+    <!--Collapsible syntax helper-->
+    <details class="p-3 text-xs text-gray-400">
+        <summary class="flex justify-between items-center">
+            <div>
+                {% if search_error %}
+                    <div class="text-red-500">{{ search_error }}</div>
+                {% endif %}
+                {% if query and not search_error %}
+                    <div>Current query: <span class="text-blue-400">{{ query }}</span></div>
+                {% endif %}
+            </div>
+            <span class="font-medium text-xs text-gray-600 cursor-pointer hover:text-orange-500 transition-colors duration-200"><i>Psssst..</i> Need help?</span>
+        </summary>
+        <div class="details-content pt-3">
+            <div class="border-gray-800">
+                <div class="mb-2">Give these a try:</div>
+                <ul class="space-y-1 list-disc pl-5">
+                    <li><span class="text-blue-400">h1 or h2</span> - Find specific spacecraft models</li>
+                    <li><span class="text-blue-400">not uplinked</span> - Status queries</li>
+                    <li><span class="text-blue-400">uplinked > 2024-05-01</span> - Date comparisons (=, !=, >, >=, <, <=)</li>
+                    <li><span class="text-blue-400">submitted by admin</span> - Filter by username</li>
+                    <li><span class="text-blue-400">acq or bee</span> - Filter by configuration type</li>
+                    <li><span class="text-blue-400">(h1 or h2) and uplinked</span> - Combine with AND, OR, NOT and parentheses</li>
+                    <li><span class="text-blue-400">(h1 or h2) uplinked</span> - AND operators are optional</li>
+                </ul>
+            </div>
+        </div>
+    </details>
+</div>
+
+<!-- Configuration list -->
+{% include "configs/includes/index.html" with page_obj=page_obj empty_message=empty_message %}
+
+{% endblock %}

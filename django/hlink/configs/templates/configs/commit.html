@@ -45,7 +45,7 @@
       <div class="border-t border-gray-700 pt-4 mb-6">
         <span class="text-gray-400 text-sm"><i class="bi bi-clipboard2-check mr-1"></i>Status</span>
         {% if config.submitted %}
-          <p>Configuration was submitted on <span class="text-blue-400">{{ config.submit_time|date:"Y-m-d H:i" }}</span></p>
+          <p>Configuration was submitted on <span class="text-blue-400">{{ config.submit_time|date:"Y-m-d\TH:i:s" }}</span>.</p>
         {% else %}
           <p class="text-yellow-500">Configuration has not been submitted yet</p>
         {% endif %}

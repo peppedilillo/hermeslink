@@ -792,7 +792,7 @@ class IndexViewsTest(TestCase):
         """Test history view displays all configurations"""
         response = self.client.get(reverse("configs:history"))
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "configs/index.html")
+        self.assertTemplateUsed(response, "configs/history.html")
 
         # Check that all configurations are shown
         self.assertEqual(response.context["page_obj"].paginator.count, 2)
@@ -811,10 +811,12 @@ class IndexViewsTest(TestCase):
 
     def test_history_view_empty(self):
         """Test history view with no configurations"""
+        from configs.views import HISTORY_EMPTY_MESSAGE
+
         Configuration.objects.all().delete()
         response = self.client.get(reverse("configs:history"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "No configuration has been uplinked yet.")
+        self.assertContains(response, HISTORY_EMPTY_MESSAGE)
 
     def test_pending_view_empty(self):
         """Test pending view with no pending configurations"""
