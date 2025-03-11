@@ -54,4 +54,3 @@ RUN chown -R app:app $HOME
 
 # and pass in the new user
 USER app
-
