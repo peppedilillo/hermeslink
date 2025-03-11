@@ -3,16 +3,16 @@
 
 <h1 class="font-bold text-4xl mb-6">New configuration</h1>
 
-Use this form to upload HERMES configurations for submission to the Mission Operations Center (MOC). They will then uplink these configurations to the spacecraft.
+<p class="mb-6">Use this form to upload HERMES configurations for submission to the Mission Operations Center (MOC). They will then uplink these configurations to the spacecraft.</p>
 
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
 
     <div class="my-6">
-        <label class="block font-medium my-6 text-2xl">Spacecraft Model:</label>
-        <div class="flex gap-4">
+        <label class="block font-medium mb-4 text-2xl">Spacecraft Model:</label>
+        <div class="flex flex-wrap gap-4">
           {% for value, text in form.model.field.choices %}
-            <label class="flex items-center cursor-pointer group">
+            <label class="flex items-center cursor-pointer group mb-2">
               <input type="radio" 
                      name="{{ form.model.name }}" 
                      value="{{ value }}" 
@@ -28,46 +28,76 @@ Use this form to upload HERMES configurations for submission to the Mission Oper
         {% endif %}
     </div>
 
-    <label class="block font-medium my-6 text-2xl">Configuration files:</label>
-    <div class="grid grid-cols-2 gap-4">
-        {% for field in form %}
+    <label class="block font-medium mb-4 text-2xl">Configuration files:</label>
+    <div class="max-w-4xl mx-auto grid grid-cols-1 xl:grid-cols-3 sm:grid-cols-2 gap-4 justify-center">  
+      {% for field in form %}
             {% if field.name != 'model' %}
-            <div class="bg-gray-900 p-1 rounded">
-                <label for="{{ field.id_for_label }}" class="block text-sm text-gray-400 mb-2 px-2 uppercase font-bold">
+            <div class="bg-gray-900 p-2 rounded border border-gray-800 hover:border-gray-700 transition-colors duration-200">
+                <label for="{{ field.id_for_label }}" class="block text-sm text-gray-400 mb-3 px-1 uppercase font-bold text-center">
                     {{ field.label }}
                 </label>
                 <div class="relative">
-                    <input type="file" id="{{ field.id_for_label }}" name="{{ field.name }}" 
-                        class="block w-full text-sm text-gray-400 px-1 py-1
-                                file:mr-4 file:p-2 file:px-6
-                                file:rounded file:border-0 
-                                file:text-sm file:font-medium
-                                file:bg-gray-800 file:text-white
-                                hover:file:bg-gray-700
-                                cursor-pointer"/>
+                    <button type="button" class="w-full py-2 px-3 text-left bg-gray-800 text-white rounded flex justify-between items-center hover:bg-gray-700 transition-colors duration-200">
+                        <span class="file-name text-sm truncate">Choose file</span>
+                        <i class="bi bi-upload ml-2"></i>
+                    </button>
+                    <input type="file" 
+                           id="{{ field.id_for_label }}" 
+                           name="{{ field.name }}" 
+                           class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" 
+                           onchange="updateFileName(this)"/>
                 </div>
-                {% if field.errors %}
-                    <div class="text-red-500 text-sm mt-2">{{ field.errors }}</div>
-                {% endif %}
+                <div class="mt-2 text-xs text-gray-500 file-status text-center">No file selected</div>
+
             </div>
             {% endif %}
         {% endfor %}
     </div>
-    <div>
-        {% if form.non_field_errors %}
-          <div class="text-red-500 text-sm mt-1">{{ form.non_field_errors }}</div>
-        {% endif %}
+    
+    <!--Error display-->
+    {% if form.errors or form.non_field_errors %}
+    <div class="text-red-500 text-sm mt-4">
+      <ul>
+      {% for field in form %}
+      {% if field.errors %}
+        <li>{{ field.errors }}</li>
+      {% endif %}
+      {% endfor %}
+      {% if form.non_field_errors %}
+        <li>{{ form.non_field_errors }}</li>
+      {% endif %}
+      </ul>
     </div>
+    {% endif %}
 
-
-      <div class="flex justify-between items-center mt-8">
+    <div class="flex justify-between items-center mt-8">
         <a href="{% url 'main:index' %}" class="text-gray-400 hover:text-white transition-colors duration-200">
-          <i class="bi bi-arrow-left mr-2"></i>Back to homepage
+            <i class="bi bi-arrow-left mr-2"></i>Back to homepage
         </a>
         <button type="submit" class="text-2xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
-          Test <i class="bi bi-arrow-right ml-2"></i>
+            Test <i class="bi bi-arrow-right ml-2"></i>
         </button>
-      </div>
+    </div>
 </form>
 
+<script>
+    function updateFileName(input) {
+        const card = input.closest('.bg-gray-900');
+        const fileName = input.files.length > 0 ? input.files[0].name : 'Choose file';
+        const nameEl = card.querySelector('.file-name');
+        const statusEl = card.querySelector('.file-status');
+        
+        nameEl.textContent = fileName;
+        
+        if (input.files.length > 0) {
+            statusEl.textContent = 'File selected';
+            statusEl.classList.add('text-green-400');
+            statusEl.classList.remove('text-gray-500');
+        } else {
+            statusEl.textContent = 'No file selected';
+            statusEl.classList.remove('text-green-400');
+            statusEl.classList.add('text-gray-500');
+        }
+    }
+</script>
 {% endblock %}

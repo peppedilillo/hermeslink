@@ -8,6 +8,7 @@
       {% csrf_token %}
       <div class="my-6">
         <div class="mb-4">Enter the UTC uplink time for this configuration. The Science Operations Center (SOC) will use this timestamp to properly calibrate scientific data.</div>
+        
         <div class="space-y-2">
           <div class="flex flex-col">
             <div class="flex-1 max-w-full">
@@ -21,43 +22,8 @@
         </div>
       </div>
 
-    <label class="block font-medium my-6 text-xl">Configuration details:</label>
-    <div class="bg-gray-900 p-6 rounded mb-8">
-      <div class="grid grid-cols-12 gap-4 mb-6">
-        <div class="col-span-1">
-          <span class="text-gray-400 text-sm">ID</span>
-          <p class="font-medium">{{ config.pk }}</p>
-        </div>
-        <div class="col-span-1">
-          <span class="text-gray-400 text-sm">Model</span>
-          <p>{{ config.model }}</p>
-        </div>
-        <div class="col-span-5">
-          <span class="text-gray-400 text-sm">Author</span>
-          <p class="font-medium">{{ config.author.username|truncatechars:24 }}</p>
-        </div>
-        <div class="col-span-5">
-          <span class="text-gray-400 text-sm">Created</span>
-          <p>{{ config.date|date:"Y-m-d H:i" }}</p>
-        </div>
-      </div>
-
-      <div class="border-t border-gray-700 pt-4 mb-6">
-        <span class="text-gray-400 text-sm"><i class="bi bi-clipboard2-check mr-1"></i>Status</span>
-        {% if config.submitted %}
-          <p>Configuration was submitted on <span class="text-blue-400">{{ config.submit_time|date:"Y-m-d\TH:i:s" }}</span>.</p>
-        {% else %}
-          <p class="text-yellow-500">Configuration has not been submitted yet</p>
-        {% endif %}
-      </div>
-      <div class="border-t border-gray-700 pt-4">
-        <span class="text-gray-400 text-sm"> <i class="bi bi-box-arrow-down mr-1"></i> Download</span>
-        <p></p>
-            <a href="{% url 'configs:download' config.id 'zip' %}" class="mr-3 text-sm text-blue-400 hover:text-blue-300">Download ZIP</a>
-            <a href="{% url 'configs:download' config.id 'tar' %}" class="text-sm text-blue-400 hover:text-blue-300">Download TAR</a>
-        </p>
-      </div>
-    </div>
+    <h2 class="block font-medium my-6 text-2xl">Configuration details:</h2>
+      {% include "configs/includes/card_config_lg.html" with config=config %}
     
       <div class="flex justify-between items-center mt-8">
         <a href="{% url 'configs:history' %}" class="text-gray-400 hover:text-white transition-colors duration-200">
