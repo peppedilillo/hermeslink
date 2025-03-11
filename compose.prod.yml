@@ -108,9 +108,12 @@ services:
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - ./grafana/dashboards:/etc/grafana/dashboards
+      - grafana-data:/var/lib/grafana
 
 volumes:
   static_volume:
   media_volume:
   logs_volume:
   postgres-data:
+  grafana-data:
+
