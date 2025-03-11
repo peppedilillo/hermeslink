@@ -2,7 +2,7 @@
 set -eo pipefail
 source /home/dilillo/hermeslink/.postgres.env
 
-BACKUP_DIR=/home/dilillo/hermeslink-backup
+BACKUP_DIR=/home/dilillo/data/docker-volumes/hlink/postgres-backup
 RETENTION_DAYS=14
 COMPOSE_FILE=/home/dilillo/hermeslink/compose.prod.yml
 
