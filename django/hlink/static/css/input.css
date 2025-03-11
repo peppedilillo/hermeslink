@@ -15,3 +15,7 @@
 .ping {
   animation: ping 1s infinite;
 }
+
+details summary::-webkit-details-marker {
+  display:none;
+}
