@@ -5,24 +5,33 @@
         Welcome <span class="text-{{ user.gang | gang_color }}-500 font-extrabold">{{ user.get_username }}</span>.
     </p>
 
-    <p class="mb-6">
-        This is <b>Hermes Link</b>, a software tool designed to facilitate reliable communication between humans and machines of the HERMES science and mission operation teams. <br>
-        Hermes Link also provides basic tools to monitor the in-orbit operations of the HERMES payloads.<br>
+    <div class="mb-6">
+        This is <b>Hermes Link</b>, a software tool designed to facilitate reliable communication between humans and machines of the HERMES science and mission operation teams.
+        <br>
+        Hermes Link also provides basic tools to monitor the in-orbit operations of the HERMES payloads.
+        <br>
+        <br>
         While we made our best to make it as reliable and sound as we could, the tool is still young, and shit may indeed happen.
-        In this case, please, let us know at: <i>giuseppe.dilillo@inaf.it</i>, <i>matteo.perri@inaf.it</i> or <i>simonetta.puccetti@asi.ssdc.it</i>.
-    </p>
+        In this case, please, let us know at:
+        <ul class="list-disc list-inside">
+            <li>giuseppe.dilillo@inaf.it</li>
+            <li>matteo.perri@inaf.it</li>
+            <li>simonetta.puccetti@asi.ssdc.it</li>
+        </ul>
+        <br>
+        Have fun and enjoy the flight!
+    </div>
 
+    <hr class="w-48 h-1 mx-auto my-6 bg-gray-100 border-0 rounded-sm md:my-10 dark:bg-gray-700">
     <h2 class="mb-6 font-bold text-2xl ">Latest ops</h2>
     {% if logs %}
         <div class="mb-6">
             <ul class="space-y-1">
-                {% for log, text_color in logs %}
-                    <li class="text-xs font-mono {{ text_color }}">{{ log }}</li>
-                {% endfor %}
+                {% for log, text_color in logs %}<li class="text-xs font-mono {{ text_color }}">{{ log }}</li>{% endfor %}
             </ul>
         </div>
     {% else %}
         <p class="text-gray-400 italic mb-6 text-center">No logs available at this time.</p>
     {% endif %}
-    
+
 {% endblock %}

@@ -1,44 +1,51 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<!--Test summary-->
-<h1 class="font-bold text-4xl mb-6">Configuration test</h1>
+    <!--Test summary-->
+    <h1 class="font-bold text-4xl mb-6">Configuration test</h1>
     <div class="mb-6">
-    {% if request.session.test_status == 0 %}
-        All tests <span class="text-green-500 font-bold">passed</span> successfully!<br>
-        You can proceed to submit this configuration.
-        <p class="text-sm text-gray-400 mt-2">
-            Note ⚠️: While all automated tests have passed, remember they can only show the presence of a bug, not the absence.<br>
-            Please review your upload carefully before submission.</p>
-    {% elif request.session.test_status == 1  %}
+        {% if request.session.test_status == 0 %}
+            All tests <span class="text-green-500 font-bold">passed</span> successfully!
+            <br>
+            You can proceed to submit this configuration.
+            <p class="text-sm text-gray-400 mt-2">
+                Note ⚠️: While all automated tests have passed, remember they can only show the presence of a bug, not the absence.
+                <br>
+                Please review your upload carefully before submission.
+            </p>
+        {% elif request.session.test_status == 1 %}
             Your configuration contains <span class="text-yellow-500 font-bold">warnings</span> but can still be submitted.
             <p class="text-sm text-gray-400 mt-2">
                 Please review the report below and address the warnings if possible before submitting.
             </p>
-    {% elif request.session.test_status == 2 %}
+        {% elif request.session.test_status == 2 %}
             Your configuration contains <span class="text-red-500 font-bold">errors</span> and cannot be submitted.
             <p class="text-sm text-gray-400 mt-2">
                 Please review the report below, fix the identified errors, and upload a new configuration.
             </p>
-    {% endif %}
+        {% endif %}
     </div>
 
-<!--Test results-->
-<h1 class="font-bold text-2xl mb-6">Test report:</h1>
+    <!--Test results-->
+    <h1 class="font-bold text-2xl mb-6">Test report:</h1>
 
-    <p class="mb-6">The test report below shows detailed validation results. This report will be included in the notification email sent to the Mission Operations Center.</p>
+    <p class="mb-6">
+        The test report below shows detailed validation results. This report will be included in the notification email sent to the Mission Operations Center.
+    </p>
     <div class="text-mono text-xs p-4 bg-gray-900 border-gray-700 border rounded-md max-h-[400px] overflow-auto">
         <pre>{{ results | safe }}</pre>
     </div>
 
-<div class="flex justify-between items-center mt-8">
-    <a href="{% url 'configs:upload' %}" class="text-gray-400 hover:text-white transition-colors duration-200">
-        <i class="bi bi-arrow-left mr-2"></i>Back to upload
-    </a>
-    {% if request.session.test_status != 2 %}
-        <a href="{% url 'configs:submit' %}" class="text-2xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
-            Submit <i class="bi bi-arrow-right"></i>
+    <div class="flex justify-between items-center mt-8">
+        <a href="{% url 'configs:upload' %}"
+           class="text-gray-400 hover:text-white transition-colors duration-200">
+            <i class="bi bi-arrow-left mr-2"></i>Back to upload
         </a>
-    {%  endif %}
-</div>
+        {% if request.session.test_status != 2 %}
+            <a href="{% url 'configs:submit' %}"
+               class="text-2xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
+                Submit <i class="bi bi-arrow-right"></i>
+            </a>
+        {% endif %}
+    </div>
 {% endblock %}

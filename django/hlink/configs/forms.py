@@ -61,6 +61,7 @@ class SubmitConfiguration(forms.Form):
     A form for submitting a configuration to the Mission Operation Center.
     Validates email recipients and handles CC email addresses.
     """
+
     recipients = forms.CharField(
         # note, this is just for displaying purpose in form.
         initial=";".join(EMAILS_MOC),
@@ -88,6 +89,7 @@ class CommitConfiguration(forms.ModelForm):
     Validates that the timestamp format is correct and that the timestamp
     occurs after the configuration's submission time.
     """
+
     uplink_time = forms.DateTimeField(
         required=True,
         help_text="A UTC timestamp string formatted as `{YYYY}-{MM}-{DD}T{HH}:{MM}:{SS}Z`.",

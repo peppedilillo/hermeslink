@@ -1,86 +1,85 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<h1 class="font-bold text-4xl mb-6">New configuration</h1>
+    <h1 class="font-bold text-4xl mb-6">New configuration</h1>
 
-<p class="mb-6">Use this form to upload HERMES configurations for submission to the Mission Operations Center (MOC). They will then uplink these configurations to the spacecraft.</p>
+    <p class="mb-6">
+        Use this form to upload HERMES configurations for submission to the Mission Operations Center (MOC). They will then uplink these configurations to the spacecraft.
+    </p>
 
-<form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
 
-    <div class="my-6">
-        <label class="block font-medium mb-4 text-2xl">Spacecraft Model:</label>
-        <div class="flex flex-wrap gap-4">
-          {% for value, text in form.model.field.choices %}
-            <label class="flex items-center cursor-pointer group mb-2">
-              <input type="radio" 
-                     name="{{ form.model.name }}" 
-                     value="{{ value }}" 
-                     {% if form.model.value|stringformat:"s" == value|stringformat:"s" %}checked{% endif %}
-                     class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-600 focus:ring-2"
-              >
-              <span class="ml-2 group-hover:text-gray-300">{{ text }}</span>
-            </label>
-          {% endfor %}
-        </div>
-        {% if form.model.errors %}
-          <div class="text-red-500 text-sm mt-1">{{ form.model.errors }}</div>
-        {% endif %}
-    </div>
-
-    <label class="block font-medium mb-4 text-2xl">Configuration files:</label>
-    <div class="max-w-4xl mx-auto grid grid-cols-1 xl:grid-cols-3 sm:grid-cols-2 gap-4 justify-center">  
-      {% for field in form %}
-            {% if field.name != 'model' %}
-            <div class="bg-gray-900 p-2 rounded border border-gray-800 hover:border-gray-700 transition-colors duration-200">
-                <label for="{{ field.id_for_label }}" class="block text-sm text-gray-400 mb-3 px-1 uppercase font-bold text-center">
-                    {{ field.label }}
-                </label>
-                <div class="relative">
-                    <button type="button" class="w-full py-2 px-3 text-left bg-gray-800 text-white rounded flex justify-between items-center hover:bg-gray-700 transition-colors duration-200">
-                        <span class="file-name text-sm truncate">Choose file</span>
-                        <i class="bi bi-upload ml-2"></i>
-                    </button>
-                    <input type="file" 
-                           id="{{ field.id_for_label }}" 
-                           name="{{ field.name }}" 
-                           class="absolute inset-0 opacity-0 w-full h-full cursor-pointer" 
-                           onchange="updateFileName(this)"/>
-                </div>
-                <div class="mt-2 text-xs text-gray-500 file-status text-center">No file selected</div>
-
+        <div class="my-6">
+            <label class="block font-medium mb-4 text-2xl">Spacecraft Model:</label>
+            <div class="flex flex-wrap gap-4">
+                {% for value, text in form.model.field.choices %}
+                    <label class="flex items-center cursor-pointer group mb-2">
+                        <input type="radio"
+                               name="{{ form.model.name }}"
+                               value="{{ value }}"
+                               {% if form.model.value|stringformat:"s" == value|stringformat:"s" %}checked{% endif %}
+                               class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-600 focus:ring-2">
+                        <span class="ml-2 group-hover:text-gray-300">{{ text }}</span>
+                    </label>
+                {% endfor %}
             </div>
-            {% endif %}
-        {% endfor %}
-    </div>
-    
-    <!--Error display-->
-    {% if form.errors or form.non_field_errors %}
-    <div class="text-red-500 text-sm mt-4">
-      <ul>
-      {% for field in form %}
-      {% if field.errors %}
-        <li>{{ field.errors }}</li>
-      {% endif %}
-      {% endfor %}
-      {% if form.non_field_errors %}
-        <li>{{ form.non_field_errors }}</li>
-      {% endif %}
-      </ul>
-    </div>
-    {% endif %}
+            {% if form.model.errors %}<div class="text-red-500 text-sm mt-1">{{ form.model.errors }}</div>{% endif %}
+        </div>
 
-    <div class="flex justify-between items-center mt-8">
-        <a href="{% url 'main:index' %}" class="text-gray-400 hover:text-white transition-colors duration-200">
-            <i class="bi bi-arrow-left mr-2"></i>Back to homepage
-        </a>
-        <button type="submit" class="text-2xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
-            Test <i class="bi bi-arrow-right ml-2"></i>
-        </button>
-    </div>
-</form>
+        <label class="block font-medium mb-4 text-2xl">Configuration files:</label>
+        <div class="max-w-4xl mx-auto grid grid-cols-1 xl:grid-cols-3 sm:grid-cols-2 gap-4 justify-center">
+            {% for field in form %}
+                {% if field.name != 'model' %}
+                    <div class="bg-gray-900 p-2 rounded border border-gray-800 hover:border-gray-700 transition-colors duration-200">
+                        <label for="{{ field.id_for_label }}"
+                               class="block text-sm text-gray-400 mb-3 px-1 uppercase font-bold text-center">
+                            {{ field.label }}
+                        </label>
+                        <div class="relative">
+                            <button type="button"
+                                    class="w-full py-2 px-3 text-left bg-gray-800 text-white rounded flex justify-between items-center hover:bg-gray-700 transition-colors duration-200">
+                                <span class="file-name text-sm truncate">Choose file</span>
+                                <i class="bi bi-upload ml-2"></i>
+                            </button>
+                            <input type="file"
+                                   id="{{ field.id_for_label }}"
+                                   name="{{ field.name }}"
+                                   class="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                                   onchange="updateFileName(this)" />
+                        </div>
+                        <div class="mt-2 text-xs text-gray-500 file-status text-center">No file selected</div>
 
-<script>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!--Error display-->
+        {% if form.errors or form.non_field_errors %}
+            <div class="text-red-500 text-sm mt-4">
+                <ul>
+                    {% for field in form %}
+                        {% if field.errors %}<li>{{ field.errors }}</li>{% endif %}
+                    {% endfor %}
+                    {% if form.non_field_errors %}<li>{{ form.non_field_errors }}</li>{% endif %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <div class="flex justify-between items-center mt-8">
+            <a href="{% url 'main:index' %}"
+               class="text-gray-400 hover:text-white transition-colors duration-200">
+                <i class="bi bi-arrow-left mr-2"></i>Back to homepage
+            </a>
+            <button type="submit"
+                    class="text-2xl hover:translate-x-2 transition-transform duration-200 cursor-pointer">
+                Test <i class="bi bi-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </form>
+
+    <script>
     function updateFileName(input) {
         const card = input.closest('.bg-gray-900');
         const fileName = input.files.length > 0 ? input.files[0].name : 'Choose file';
@@ -99,5 +98,5 @@
             statusEl.classList.add('text-gray-500');
         }
     }
-</script>
+    </script>
 {% endblock %}

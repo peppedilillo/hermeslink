@@ -7,5 +7,5 @@ from . import views
 app_name = "main"
 urlpatterns = [
     path("", views.index, name="index"),
-    path("favicon.ico", RedirectView.as_view(url=staticfiles_storage.url('pics/favicon.ico')))
+    path("favicon.ico", RedirectView.as_view(url=staticfiles_storage.url("pics/favicon.ico"))),
 ]

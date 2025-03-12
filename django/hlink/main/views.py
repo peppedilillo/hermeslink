@@ -1,10 +1,10 @@
-from django.http import HttpRequest, HttpResponse
 from math import sqrt
 
 from django.contrib.auth.decorators import login_required
+from django.http import HttpRequest
+from django.http import HttpResponse
 from django.shortcuts import render
 from logger.handlers import get_cached_info_logs
-
 
 COLOR_LIST = [
     c1

@@ -1,10 +1,10 @@
 import logging
 
+from celery import shared_task
 import django.db as db
 from django.utils import timezone
 from influxdb_client import InfluxDBClient
 from redis import Redis
-from celery import shared_task
 
 from hlink import settings
 
@@ -49,11 +49,11 @@ def check_services():
 
     return redis_default.hset(
         "service_status",
-        mapping = {
+        mapping={
             "status_web": status_web,
             "status_db": status_db,
             "status_dashboards": status_influx,
             "status_cache": status_redis,
             "status_timestamp": timezone.now().strftime("%H:%M:%S"),
-        }
+        },
     )
