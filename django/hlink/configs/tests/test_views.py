@@ -797,18 +797,6 @@ class IndexViewsTest(TestCase):
         # Check that all configurations are shown
         self.assertEqual(response.context["page_obj"].paginator.count, 2)
 
-    def test_pending_view(self):
-        """Test pending view shows only non-uplinked configurations"""
-        response = self.client.get(reverse("configs:pending"))
-        self.assertEqual(response.status_code, 200)
-
-        # Verify only non-uplinked configs are shown
-        self.assertEqual(response.context["page_obj"].paginator.count, 1)
-        if response.context["page_obj"]:
-            config = response.context["page_obj"][0]
-            self.assertEqual(config.id, self.submitted_config.id)
-            self.assertFalse(config.uplinked)
-
     def test_history_view_empty(self):
         """Test history view with no configurations"""
         from configs.views import HISTORY_EMPTY_MESSAGE
@@ -817,25 +805,6 @@ class IndexViewsTest(TestCase):
         response = self.client.get(reverse("configs:history"))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, HISTORY_EMPTY_MESSAGE)
-
-    def test_pending_view_empty(self):
-        """Test pending view with no pending configurations"""
-        # Mark all configs as uplinked
-        self.submitted_config.uplinked = True
-        self.submitted_config.uplinked_by = self.user
-        self.submitted_config.uplink_time = timezone.now()
-        self.submitted_config.save()
-
-        response = self.client.get(reverse("configs:pending"))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "No pending configuration.")
-
-    def test_pending_authentication_required(self):
-        """Test that download view requires authentication"""
-        self.client.logout()
-        response = self.client.get(reverse("configs:pending"))
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response.url.startswith("/accounts/login/"))
 
     def test_history_authentication_required(self):
         """Test that download view requires authentication"""

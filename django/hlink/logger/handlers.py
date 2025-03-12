@@ -37,12 +37,18 @@ class CacheHandler(logging.Handler):
 
 
 def get_cached_info_logs() -> list[str]:
-    """Returns the cached info logs."""
+    """
+    Returns the cached INFO-level log messages from Redis.
+    Limited to the most recent CACHE_INFO_LOGS_LIMIT entries.
+    """
     redis_default = Redis.from_url(url=settings.CACHES["default"]["LOCATION"])
     return [bs.decode() for bs in redis_default.lrange(CACHE_INFO_LOGS, 0, CACHE_INFO_LOGS_LIMIT - 1)]
 
 
 def get_cached_logs() -> list[str]:
-    """Returns all the cached logs."""
+    """
+    Returns all cached log messages from Redis regardless of log level.
+    Limited to the most recent CACHE_LOGS_LIMIT entries.
+    """
     redis_default = Redis.from_url(url=settings.CACHES["default"]["LOCATION"])
     return [bs.decode() for bs in redis_default.lrange(CACHE_LOGS, 0, CACHE_LOGS_LIMIT - 1)]

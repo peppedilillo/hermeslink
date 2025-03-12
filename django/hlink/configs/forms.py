@@ -21,9 +21,8 @@ def check_length(
     file: UploadedFile,
     ftype: Literal[*CONFIG_TYPES],
 ):
-    """
-    Checks length of an uploaded file to match the expected value for its type.
-    """
+    """Validates that an uploaded file's size matches the expected size for its type.
+    Raises ValidationError if the size doesn't match the expected value."""
     if file.size != CONFIG_SIZE[ftype]:
         raise forms.ValidationError(
             f"Your {ftype} configuration file size is {file.size} bytes. "
@@ -34,6 +33,8 @@ def check_length(
 class UploadConfiguration(forms.Form):
     """
     A form for uploading configuration files for a specific payload model.
+    Validates file sizes against expected values for each configuration type.
+    Ensures at least one configuration file is provided.
     """
 
     model = forms.ChoiceField(choices=Configuration.MODELS)
@@ -57,9 +58,9 @@ class UploadConfiguration(forms.Form):
 
 class SubmitConfiguration(forms.Form):
     """
-    A form for mailing a configuration.
+    A form for submitting a configuration to the Mission Operation Center.
+    Validates email recipients and handles CC email addresses.
     """
-
     recipients = forms.CharField(
         # note, this is just for displaying purpose in form.
         initial=";".join(EMAILS_MOC),
@@ -82,6 +83,11 @@ class SubmitConfiguration(forms.Form):
 
 
 class CommitConfiguration(forms.ModelForm):
+    """
+    A form for committing an uplink timestamp for a configuration.
+    Validates that the timestamp format is correct and that the timestamp
+    occurs after the configuration's submission time.
+    """
     uplink_time = forms.DateTimeField(
         required=True,
         help_text="A UTC timestamp string formatted as `{YYYY}-{MM}-{DD}T{HH}:{MM}:{SS}Z`.",

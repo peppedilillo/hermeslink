@@ -24,18 +24,25 @@ UNCERTAIN_STATUS = {
 }
 
 def boold(r: dict, key: str) -> bool:
-    """Helper function transforming a redis binary key into a bool."""
+    """Helper function transforming a Redis binary key into a boolean value.
+    Returns True if the key exists and its value is '1', False otherwise."""
     if (k := key.encode()) in r:
         return r[k] == b"1"
     return False
 
 def vald(r: dict, key: str) -> int:
-    """Helper function transforming a redis value into a status."""
+    """Helper function transforming a Redis value into a service status code.
+    Returns STATUS_ON if the key exists and is true, STATUS_OFF otherwise."""
     return STATUS_ON if boold(r, key) else STATUS_OFF
 
 
 def service_status(request: HttpRequest) -> dict:
-    """A context preprocessor providing useful info on service status."""
+    """
+    Context processor providing service status information for the site header.
+    Retrieves status information from Redis for web, cache, database, and dashboard services.
+
+    Returns a dictionary with service status information or UNCERTAIN_STATUS if Redis is unavailable.
+    """
     try:
         redis_default = Redis.from_url(url=settings.CACHES["default"]["LOCATION"])
     except Exception:

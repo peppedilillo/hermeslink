@@ -13,7 +13,14 @@ from django.utils import timezone
 
 
 def interpret_search_query(query: str):
-    """Interprets a search query string into a django filter query."""
+    """
+    High-level function to parse and interpret a search query string.
+    Returns a Django Q object representing the filter query.
+
+    Raises:
+        ParseError: If the query has syntax errors
+        InterpreterError: If semantics of the query are invalid
+    """
     tokens = Scanner(query).scan_tokens()
     ast = Parser(tokens).parse()
     filter_query = Interpreter().evaluate(ast)
@@ -130,7 +137,10 @@ class Token:
 
 
 class Scanner:
-    """Tokenizes a query string"""
+    """
+    Tokenizes a search query string into lexical tokens.
+    Handles syntax elements like operators, literals, dates, and keywords.
+    """
 
     def __init__(self, text: str):
         self.text = text
@@ -292,7 +302,10 @@ class ParseError(Exception):
 
 
 class Parser:
-    """An abstract syntax tree parser by recursive descent"""
+    """
+    An abstract syntax tree parser using recursive descent technique.
+    Transforms tokens into a structured expression tree for query interpretation.
+    """
 
     def __init__(self, tokens: list[Token]):
         self.tokens = tokens
@@ -440,7 +453,10 @@ class InterpreterError(Exception):
 
 
 class Interpreter:
-    """Interpret an AST built from query string into a complex query expression."""
+    """
+    Interprets an AST built from query string into a complex Django Q expression.
+    Handles binary operations (AND, OR), unary operations (NOT), and query conditions.
+    """
 
     def evaluate(self, expr: Expression):
         try:

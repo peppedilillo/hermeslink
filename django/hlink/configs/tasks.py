@@ -34,7 +34,12 @@ def email_error_to_admin(
     config_id: int | None = None,
 ):
     """
-    Sends an error notification email to administrators.
+    Sends an error notification email to administrators with details about the error.
+
+    Args:
+        error_message: The error message to include in the email
+        task_name: Name of the task that encountered the error
+        config_id: Optional configuration ID related to the error
     """
     subject = f"[HERMES] ERROR: {task_name}" + (f" - Config #{config_id}" if config_id else "")
 
@@ -72,7 +77,13 @@ def log_error_and_notify_admin(
     config_id: int | None = None,
 ):
     """
-    Simple utility wrapper to admin notification email.
+    Logs an error at the specified level and sends notification to administrators.
+
+    Args:
+        level: Logging level (e.g., logging.WARNING)
+        error_message: Error message to log and send
+        task_name: Name of the task that encountered the error
+        config_id: Optional configuration ID related to the error
     """
     logger.log(level=level, msg=error_message)
     return email_error_to_admin(error_message, task_name, config_id)
@@ -88,10 +99,19 @@ def parse_update_caldb_command(
     dryrun: bool,
 ) -> str:
     """
-    Helper method.
     Constructs a shell command to update the calibration database with a new ASIC configuration.
-    The command will run the asic2caldb utility on the specified filepath with appropriate
-    arguments and redirects output to log files.
+
+    Args:
+        filepath_asic1: Path to the ASIC1 configuration file on the remote system
+        config_id: Configuration ID
+        dt: Timestamp for the CALDB update
+        model: Spacecraft model identifier
+        dirpath_remote_log: Directory for log files on the remote system
+        path_remote_script: Path to the update script on the remote system
+        dryrun: If True, run in test mode without actual updates
+
+    Returns:
+        A formatted shell command string to execute on the remote system
     """
     model = model.lower()
     flag_update_caldb = "0" if dryrun else "1"

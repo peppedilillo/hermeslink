@@ -193,9 +193,12 @@ class Configuration(models.Model):
         return {ftype: getattr(self, ftype) for ftype in self.non_null_configs_keys()}
 
     def get_encoded_config_data(self) -> dict[str, str]:
+        """Returns a dictionary of hex-encoded configuration data for serialization."""
         return {ftype: content.hex() for ftype, content in self.get_config_data().items()}
 
     def filestring(self) -> str:
+        """Generates a standardized filename string for this configuration.
+        Format: hermes_{model}_config_id{id:04d}_{date:%Y%m%d}"""
         return f"hermes_{self.model}_config_id{self.id:04d}_{self.date:%Y%m%d}"
 
 

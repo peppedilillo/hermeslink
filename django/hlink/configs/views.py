@@ -38,12 +38,14 @@ logger = logging.getLogger("hlink")
 # this choice is driven by the need of an unambiguous order to keep track of the sha256, which we
 # computed on the concatenated files.
 def encode_config_data(config_data: OrderedDict[str, bytes]) -> dict[str, str]:
-    """Encodes binary configuration data for session storage using hex"""
+    """Encodes binary configuration data for session storage using hex encoding.
+    Preserves the order of the keys for consistent hash computation."""
     return OrderedDict((ftype, content.hex()) for ftype, content in config_data.items())
 
 
 def decode_config_data(encoded_data: OrderedDict[str, str]) -> dict[str, bytes]:
-    """Decodes hex-encoded configuration data from session storage"""
+    """Decodes hex-encoded configuration data from session storage back to binary format.
+    Preserves the order of the keys from the original encoding."""
     return OrderedDict((ftype, bytes.fromhex(content)) for ftype, content in encoded_data.items())
 
 
@@ -78,7 +80,8 @@ def upload(request: HttpRequest) -> HttpResponse:
 
 
 def validate_config_model(model: Literal[*SPACECRAFTS_NAMES]) -> bool:
-    """Checks config model to be allowed"""
+    """Validates that the given model identifier is one of the allowed spacecraft models.
+    Returns True if the model is valid, False otherwise."""
     model_keys, _ = zip(*Configuration.MODELS)
     return model in model_keys
 
@@ -91,7 +94,8 @@ def validate_config_data(config_data: dict[str, str]):
 
 def session_is_valid(request: HttpRequest) -> bool:
     """
-    Checks hash to be present, model to be well set and all files to be online.
+    Checks if all required session data for the configuration workflow is present and valid.
+    Returns True if model, data and hash are all present and valid, False otherwise.
     """
     if (
         ("config_model" in request.session and validate_config_model(request.session["config_model"]))

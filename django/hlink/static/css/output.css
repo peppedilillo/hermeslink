@@ -849,6 +849,10 @@ video {
   cursor: pointer;
 }
 
+.cursor-default {
+  cursor: default;
+}
+
 .list-disc {
   list-style-type: disc;
 }
@@ -1533,6 +1537,10 @@ details summary::-webkit-details-marker {
 
   .sm\:text-left {
     text-align: left;
+  }
+
+  .sm\:text-center {
+    text-align: center;
   }
 
   .sm\:text-6xl {
