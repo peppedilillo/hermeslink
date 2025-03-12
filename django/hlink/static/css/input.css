@@ -6,15 +6,15 @@
   .status-dot {
     @apply w-1 h-1 rounded-full;
   }
-  
+
   .status-dot-green {
     @apply bg-green-500 shadow-glow-green;
   }
-  
+
   .status-dot-red {
     @apply bg-red-500 shadow-glow-red;
   }
-  
+
   .status-dot-yellow {
     @apply bg-yellow-500 shadow-glow-yellow;
   }
@@ -38,18 +38,18 @@ details summary::-webkit-details-marker {
 }
 
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  border-radius: 100vh;
-  background: #00000000;
+  border-radius: 50vh;
+  background: #ffffff00;
 }
 
 ::-webkit-scrollbar-thumb {
   background: theme('colors.gray.700');
-  border-radius: 100vh;
+  border-radius: 50vh;
 }
 
 ::-webkit-scrollbar-thumb:hover {

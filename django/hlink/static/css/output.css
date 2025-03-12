@@ -1387,18 +1387,18 @@ details summary::-webkit-details-marker {
 }
 
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  border-radius: 100vh;
-  background: #00000000;
+  border-radius: 50vh;
+  background: #ffffff00;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #374151;
-  border-radius: 100vh;
+  border-radius: 50vh;
 }
 
 ::-webkit-scrollbar-thumb:hover {
