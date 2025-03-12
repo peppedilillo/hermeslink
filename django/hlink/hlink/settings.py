@@ -164,13 +164,14 @@ LOGGING = {
             "class": "logging.NullHandler",
             "level": "INFO",
         },
-        "console": {
-            "class": "logging.StreamHandler",
-            "level": "INFO",
-        },
         "cache": {
             "class": "logger.handlers.CacheHandler",
             "level": "INFO",
+        },
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "INFO",
+            "formatter": "standard",
         },
         "file": {
             "class": "logging.handlers.TimedRotatingFileHandler",
