@@ -37,3 +37,21 @@ details summary::-webkit-details-marker {
   display:none;
 }
 
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  border-radius: 100vh;
+  background: #00000000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: theme('colors.gray.700');
+  border-radius: 100vh;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: theme('colors.gray.500');
+}
