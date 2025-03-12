@@ -79,8 +79,6 @@ services:
     image: influxdb:2.7
     expose:
       - 8086
-    environment:
-      DOCKER_INFLUXDB_INIT_MODE: setup
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8086/health"]
       interval: 5s
@@ -101,9 +99,6 @@ services:
     image: grafana/grafana:11.5.1
     expose:
       - 3000
-    environment:
-      GF_LOG_LEVEL: WARNING
-      GF_SERVER_ROOT_URL: https://hermeslink.ssdc.asi.it/grafana
     volumes:
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards

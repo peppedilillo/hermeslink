@@ -47,3 +47,12 @@ def index(request: HttpRequest) -> HttpResponse:
             "logs": [(log, c) for log, c in zip(logs, colors)],
         },
     )
+
+
+@login_required
+def auth_status(request):
+    """Endpoint for nginx auth_request, returns 200 if user is authenticated
+    and attach username to the header."""
+    response = HttpResponse(status=200)
+    response.headers["username"] = request.user.username
+    return response
