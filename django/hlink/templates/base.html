@@ -129,20 +129,38 @@
       </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="w-full pb-6 text-xs text-gray-400 text-mono">
-      <div class="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-8 mx-auto">
-        <img src="{% static 'pics/logo_H_white.png' %}" class="h-14 hidden sm:block object-scale-down">
-        <div class="w-full sm:w-64 text-center sm:text-left">Hermes Link is a web application developed at <span class="text-nowrap">ASI-SSDC</span> for the HERMES-Pathfinder collaboration.<a href="https://github.com/peppedilillo/" class="transition-colors duration-300 hover:text-white">~p25</a></div>
-        <div class="flex flex-row sm:flex-col gap-4 sm:gap-0">
-          <a href="https://github.com/peppedilillo/hermeslink" class="transition-colors duration-300 hover:text-white">code</a>
-          <a href="https://www.hermes-sp.eu/" class="transition-colors duration-300 hover:text-white">hermes</a>
-          <a class="transition-colors">about</a>
-        </div>
-        <img src="{% static 'pics/bulletsticker.png' %}" class="h-12 pt-4 sm:pt-0 object-scale-down">
+  <!-- Footer -->
+  <footer class="w-full pb-6 text-xs text-gray-500 text-mono mb-6">
+    <!-- Status indicators -->
+    <div class="flex justify-center items-center gap-2 sm:gap-20 mb-2 sm:mb-4">
+      {% if services %}
+        {% for service, status in services %}
+          <div class="flex items-center">
+            <span class="mr-1">{{ service }}</span>
+            <div class="status-dot {% if status == 0 %}status-dot-green animate-pulse{% elif status == 1 %}status-dot-red{% else %}status-dot-yellow{% endif %}"></div>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+
+    <!-- Main footer content -->
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-6 mx-auto">
+      <img src="{% static 'pics/logo_H_white.png' %}" class="h-12 hidden sm:block object-scale-down">
+      
+      <div class="flex flex-row sm:flex-col gap-4 sm:gap-0">
+        <a href="https://github.com/peppedilillo/hermeslink" class="transition-colors duration-300 hover:text-white">code</a>
+        <a href="https://www.hermes-sp.eu/" class="transition-colors duration-300 hover:text-white">hermes</a>
+        <a class="transition-colors">about</a>
       </div>
-    </footer>
-  </div>
+      
+      <div class="w-full sm:w-52 text-center sm:text-left">
+        Hermes Link is a web application developed at <span class="text-nowrap">ASI-SSDC</span> for the HERMES collaboration.
+        <a href="https://github.com/peppedilillo/" class="transition-colors duration-300 hover:text-white">~p25</a>
+      </div>
+      
+      <img src="{% static 'pics/bulletsticker.png' %}" class="h-10 sm:h-8 pt-4 sm:pt-0 object-scale-down">
+    </div>
+  </footer>
 
   <!-- JavaScript for sidebar toggle -->
   <script>

@@ -22,6 +22,7 @@ services:
       - ./django/hlink:/home/app/web
       - ./django/dev/mediafiles:/home/app/static/mediafiles
       - ./django/dev/emails:/home/app/emails
+      - ./django/dev/logs:/home/app/logs
     ports:
       - 8000:8000
     depends_on:

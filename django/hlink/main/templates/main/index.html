@@ -24,20 +24,5 @@
     {% else %}
         <p class="text-gray-400 italic mb-6 text-center">No logs available at this time.</p>
     {% endif %}
-
-    {% if services %}
-    <h2 class="mb-4 font-bold text-2xl">Service status</h2>
-    <div class="mb-2">
-        <ul class="space-x-1">
-            {% for service, status in services.items %}
-                <span>{{ service }}</span>
-                {% if status == True %}
-                    <i class="bi bi-circle-fill text-green-500 animate-pulse"></i>
-                {% else %}
-                    <i class="bi bi-circle-fill text-red-500"></i>
-                {% endif %}
-            {% endfor %}
-        </ul>
-    </div>
-    {% endif %}
+    
 {% endblock %}

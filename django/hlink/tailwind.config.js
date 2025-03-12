@@ -21,5 +21,19 @@ module.exports = {
     'text-green-800',
     'text-green-900',
     'text-green-950',
+    'status-dot',
+    'status-dot-green',
+    'status-dot-red',
+    'status-dot-yellow',
   ],
+  theme: {
+    extend: {
+      // Add custom box shadows for the glow effects
+      boxShadow: {
+        'glow-green': '0 0 5px 2px rgba(34, 197, 94, 0.6)',
+        'glow-red': '0 0 5px 2px rgba(239, 68, 68, 0.6)',
+        'glow-yellow': '0 0 5px 2px rgba(234, 179, 8, 0.6)',
+      },
+    },
+  },
 }

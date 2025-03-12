@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .status-dot {
+    @apply w-1 h-1 rounded-full;
+  }
+  
+  .status-dot-green {
+    @apply bg-green-500 shadow-glow-green;
+  }
+  
+  .status-dot-red {
+    @apply bg-red-500 shadow-glow-red;
+  }
+  
+  .status-dot-yellow {
+    @apply bg-yellow-500 shadow-glow-yellow;
+  }
+}
 
 .loading-spin {
   animation: spin 1s linear infinite;
@@ -19,3 +36,4 @@
 details summary::-webkit-details-marker {
   display:none;
 }
+
