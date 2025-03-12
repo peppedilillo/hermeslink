@@ -103,7 +103,7 @@ services:
       - 3000
     environment:
       GF_LOG_LEVEL: WARNING
-      GF_SERVER_ROOT_URL: http://localhost:1337/grafana
+      GF_SERVER_ROOT_URL: https://hermeslink.ssdc.asi.it/grafana
     volumes:
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
