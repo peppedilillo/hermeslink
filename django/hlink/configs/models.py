@@ -33,6 +33,8 @@ class Configuration(models.Model):
 
     MODELS = tuple(zip(SPACECRAFTS_NAMES, SPACECRAFTS_NAMES))
 
+    # we have no drafts yet implemented but having separate date and submit_time
+    # could come handy in the future.
     date = models.DateTimeField(
         auto_now_add=True,
     )
@@ -41,7 +43,8 @@ class Configuration(models.Model):
         related_name="submitted_configurations",
         on_delete=models.PROTECT,
     )
-    # these field is for when a configuration is first sent to the MOC
+    # these field is for when a configuration is first sent to the MOC.
+    # i considered if having a submit_by field would be useful for anything but symmetry and i don't think so
     submitted = models.BooleanField(
         default=False,
     )
