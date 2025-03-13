@@ -34,7 +34,14 @@
         <link rel="manifest" href={% static 'site.webmanifest' %}>
     </head>
 
-    <body class="min-h-screen bg-black">
-        <div class="flex flex-col min-h-screen justify-center items-center text-6xl">👋</div>
+    <body class="min-h-screen bg-black text-white">
+        <div class="flex flex-col min-h-screen justify-center items-center">
+            <div class="justify-start">
+                <h1 class="text-6xl font-extrabold pb-4">👋</h1>
+                <div class="text-right text-gray-500 hover:text-orange-500 transition-colors duration-200">
+                    <a href="{% url 'login' %}">Back to login?</a>
+                </div>
+            </div>
+        </div>
     </body>
 </html>
