@@ -121,18 +121,18 @@
             <div class="pagination flex flex-wrap justify-center sm:justify-end items-center gap-2 my-8 text-sm text-gray-400">
                 {% if page_obj.has_previous %}
                     <a href="?page=1{% if query %}&query={{ query|urlencode }}{% endif %}"
-                       class="px-2 py-1 hover:text-white transition-colors duration-200">« first</a>
+                       class="px-2 py-1 hover:text-orange-500 transition-colors duration-300">« first</a>
                     <a href="?page={{ page_obj.previous_page_number }}{% if query %}&query={{ query|urlencode }}{% endif %}"
-                       class="px-2 py-1 hover:text-white transition-colors duration-200">previous</a>
+                       class="px-2 py-1 hover:text-orange-500 transition-colors duration-300">previous</a>
                 {% endif %}
 
                 <span class="px-2 py-1">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
 
                 {% if page_obj.has_next %}
                     <a href="?page={{ page_obj.next_page_number }}{% if query %}&query={{ query|urlencode }}{% endif %}"
-                       class="px-2 py-1 hover:text-white transition-colors duration-200">next</a>
+                       class="px-2 py-1 hover:text-orange-500 transition-colors duration-300">next</a>
                     <a href="?page={{ page_obj.paginator.num_pages }}{% if query %}&query={{ query|urlencode }}{% endif %}"
-                       class="px-2 py-1 hover:text-white transition-colors duration-200">last »</a>
+                       class="px-2 py-1 hover:text-orange-500 transition-colors duration-300">last »</a>
                 {% endif %}
             </div>
         {% endif %}

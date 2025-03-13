@@ -1,8 +1,7 @@
 {% extends 'base.html' %}
-{% load accounts_extras %}
 {% block content %}
     <p class="mb-6">
-        Welcome <span class="text-{{ user.gang | gang_color }}-500 font-extrabold">{{ user.get_username }}</span>.
+        Welcome <span class="font-extrabold">{{ user.get_username }}</span>.
     </p>
 
     <div class="mb-6">
