@@ -15,8 +15,8 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 from configs.models import Configuration
-from configs.tasks import email_error_to_admin
 from configs.tasks import email_caldb_update_to_admin
+from configs.tasks import email_error_to_admin
 from configs.tasks import log_error_and_notify_admin
 from configs.tasks import ssh_update_caldb
 from django.contrib.auth import get_user_model

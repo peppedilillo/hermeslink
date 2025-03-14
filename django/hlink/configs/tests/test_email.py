@@ -13,11 +13,12 @@ EMAIL SUBMIT TESTS:
 
 from io import BytesIO
 from pathlib import Path
-import zipfile
 from unittest.mock import patch
+import zipfile
 
 from accounts.models import CustomUser
 from configs.models import Configuration
+from configs.tasks import EMAIL_HEADER_ERROR
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
@@ -25,8 +26,6 @@ from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
-
-from configs.tasks import EMAIL_HEADER_ERROR
 from hermes import STANDARD_FILENAMES
 from hlink.settings import BASE_DIR
 
@@ -156,7 +155,7 @@ class ConfigurationEmailTest(TestCase):
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_submit_with_overlapping_cc(self):
-        """Test """
+        """Test"""
         self.prepare_submit_session()
         form_data = {
             "cc": [*contacts.EMAILS_STAFF][:1],
@@ -179,7 +178,7 @@ class ConfigurationEmailTest(TestCase):
     # an error email instead of the one confirming script execution
     @patch("configs.tasks.paramiko.SSHClient")
     def test_commit_with_overlapping_cc(self, mock_ssh_client):
-        """Test """
+        """Test"""
         config = self.prepare_commit_session()
         mail.outbox = []
         uplink_time = timezone.now() - timezone.timedelta(minutes=1)
@@ -215,7 +214,7 @@ class ConfigurationEmailTest(TestCase):
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_commit_with_no_ssh_results_in_email_error(self):
-        """Test """
+        """Test"""
         config = self.prepare_commit_session()
         mail.outbox = []
         uplink_time = timezone.now() - timezone.timedelta(minutes=1)
@@ -264,7 +263,6 @@ class ConfigurationEmailTest(TestCase):
                 content = zf.read(str(filename))
                 original_file = self.files_fm6[ftype].open().read()
                 self.assertEqual(content, original_file)
-
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")

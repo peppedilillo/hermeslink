@@ -9,7 +9,6 @@ from django.shortcuts import render
 from ipware import get_client_ip
 from redis import Redis
 
-
 logger = logging.getLogger("hlink")
 
 

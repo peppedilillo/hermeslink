@@ -12,7 +12,8 @@ from configs.reports import write_test_report_html
 from configs.search import interpret_search_query
 from configs.search import InterpreterError
 from configs.search import ParseError
-from configs.tasks import email_config_to_moc, email_uplink_to_soc
+from configs.tasks import email_config_to_moc
+from configs.tasks import email_uplink_to_soc
 from configs.tasks import ssh_update_caldb
 from configs.validators import Status
 from configs.validators import validate_configurations

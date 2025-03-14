@@ -16,6 +16,7 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from hermes import CONFIG_SIZE
 from hermes import SPACECRAFTS_NAMES
+from hlink.contacts import EMAILS_STAFF
 from influxdb_client import InfluxDBClient
 from influxdb_client import Point
 from influxdb_client.client.write_api import SYNCHRONOUS
@@ -24,7 +25,6 @@ from paramiko import ssh_exception
 
 from hlink import contacts
 from hlink import settings
-from hlink.contacts import EMAILS_STAFF
 
 logger = logging.getLogger("hlink")
 
@@ -42,6 +42,7 @@ def recipients(to: set, cc: set) -> dict[str, list[str]]:
         "to": [*to],
         "cc": cc,
     }
+
 
 def email_error_to_admin(
     error_message: str,
@@ -379,7 +380,7 @@ def email_config_to_moc(
                 subject=f"[HERMES] {config.model} Payload Configuration Update - {config_id}",
                 body=email_body,
                 from_email=settings.EMAIL_HOST_USER,
-                **recipients(contacts.EMAILS_MOC, set(cc))
+                **recipients(contacts.EMAILS_MOC, set(cc)),
             )
             dirname = f"{config.filestring()}"
             archive_content = write_archive(config, "zip", dirname=dirname)
