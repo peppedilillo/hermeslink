@@ -32,7 +32,7 @@ class CacheHandler(logging.Handler):
                 _ = redis_default.rpop(CACHE_INFO_LOGS)
 
         n = redis_default.lpush(CACHE_LOGS, f"{timestamp} {record.levelname}: {record.msg}")
-        if n > CACHE_LOGS_LIMIT:l
+        if n > CACHE_LOGS_LIMIT:
             _ = redis_default.rpop(CACHE_LOGS)
 
 
