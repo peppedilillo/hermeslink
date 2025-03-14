@@ -123,7 +123,7 @@ class ConfigurationEmailTest(TestCase):
         self.assertEqual(tuple(sorted(email.to)), tuple(sorted([*contacts.EMAILS_MOC])))
         self.assertEqual(
             tuple(sorted(email.cc)),
-            tuple(sorted(["cc1@example.com", *(contacts.EMAILS_ADMIN - contacts.EMAILS_MOC)])),
+            tuple(sorted(["cc1@example.com", *(contacts.EMAILS_STAFF - set(email.to))])),
         )
 
         # check attachments
@@ -139,17 +139,16 @@ class ConfigurationEmailTest(TestCase):
         """Test email submit with multiple CC recipients"""
         self.prepare_submit_session()
         form_data = {
-            "recipient": "recipient@email.com",
             "cc": "cc1@example.com; cc2@example.com",
         }
         response = self.client_soc.post(reverse("configs:submit"), data=form_data)
         self.assertEqual(response.status_code, 200)
         email, *_ = mail.outbox
-        # email reach moc user
+        # email reach intended recipients
         self.assertEqual(tuple(sorted(email.to)), tuple(sorted([*contacts.EMAILS_MOC])))
         self.assertEqual(
             sorted(email.cc),
-            sorted(["cc1@example.com", "cc2@example.com", *(contacts.EMAILS_ADMIN - contacts.EMAILS_MOC)]),
+            sorted(["cc1@example.com", "cc2@example.com", *(contacts.EMAILS_STAFF - set(email.to))]),
         )
         # no double emails
         self.assertTrue(len(email.to + email.cc) == len(set(email.to + email.cc)))
@@ -160,17 +159,16 @@ class ConfigurationEmailTest(TestCase):
         """Test """
         self.prepare_submit_session()
         form_data = {
-            "recipient": "recipient@email.com",
-            "cc": [*contacts.EMAILS_ADMIN][:1],
+            "cc": [*contacts.EMAILS_STAFF][:1],
         }
         response = self.client_soc.post(reverse("configs:submit"), data=form_data)
         self.assertEqual(response.status_code, 200)
         email, *_ = mail.outbox
-        # email reach moc user
+        # email reach intended recipients
         self.assertEqual(tuple(sorted(email.to)), tuple(sorted([*contacts.EMAILS_MOC])))
         self.assertEqual(
             sorted(email.cc),
-            sorted([*(contacts.EMAILS_ADMIN - contacts.EMAILS_MOC)]),
+            sorted([*(contacts.EMAILS_STAFF - set(email.to))]),
         )
         # no double emails
         self.assertTrue(len(email.to + email.cc) == len(set(email.to + email.cc)))
@@ -192,18 +190,31 @@ class ConfigurationEmailTest(TestCase):
         self.assertTemplateUsed(response, "configs/commit_success.html")
 
         config.refresh_from_db()
-        self.assertEqual(len(mail.outbox), 1)
-        email = mail.outbox[0]
-        # the email gets to soc user
-        self.assertEqual(tuple(sorted(email.to)), tuple(sorted([*contacts.EMAILS_SOC])))
-        # since SOC user are into tos, they are not in cc too
-        self.assertTrue(not any(c in email.cc for c in contacts.EMAILS_SOC))
+        self.assertEqual(len(mail.outbox), 2)
+        email_soc, email_caldb = mail.outbox
+        # email reach intended recipients
+        self.assertEqual(tuple(sorted(email_soc.to)), tuple(sorted([*contacts.EMAILS_SOC])))
+        self.assertEqual(
+            sorted(email_soc.cc),
+            sorted([*(contacts.EMAILS_STAFF - set(email_soc.to))]),
+        )
         # no double emails
-        self.assertTrue(len(email.to + email.cc) == len(set(email.to + email.cc)))
+        self.assertTrue(len(email_soc.to + email_soc.cc) == len(set(email_soc.to + email_soc.cc)))
+
+        # error email reach intended recipients
+        self.assertEqual(tuple(sorted(email_caldb.to)), tuple(sorted([*contacts.EMAILS_STAFF])))
+        # we mocking ssh so we expect no error
+        self.assertFalse(EMAIL_HEADER_ERROR in email_caldb.subject)
+        self.assertEqual(
+            sorted(email_caldb.cc),
+            sorted([*(contacts.EMAILS_STAFF - set(email_caldb.to))]),
+        )
+        # no double emails
+        self.assertTrue(len(email_caldb.to + email_caldb.cc) == len(set(email_caldb.to + email_caldb.cc)))
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
-    def test_commit_with_down_ssh_results_in_email_error(self):
+    def test_commit_with_no_ssh_results_in_email_error(self):
         """Test """
         config = self.prepare_commit_session()
         mail.outbox = []
@@ -215,14 +226,27 @@ class ConfigurationEmailTest(TestCase):
         self.assertTemplateUsed(response, "configs/commit_success.html")
 
         config.refresh_from_db()
-        self.assertEqual(len(mail.outbox), 1)
-        email = mail.outbox[0]
-        # ssh is not there, so we should get an error
-        self.assertTrue(EMAIL_HEADER_ERROR in email.subject)
-        # error email gets to the admin list
-        self.assertEqual(tuple(sorted(email.to)), tuple(sorted([*contacts.EMAILS_ADMIN])))
+        self.assertEqual(len(mail.outbox), 2)
+        email_soc, email_error = mail.outbox
+
+        # email reach intended recipients
+        self.assertEqual(tuple(sorted(email_soc.to)), tuple(sorted([*contacts.EMAILS_SOC])))
+        self.assertEqual(
+            sorted(email_soc.cc),
+            sorted([*(contacts.EMAILS_STAFF - set(email_soc.to))]),
+        )
         # no double emails
-        self.assertTrue(len(email.to + email.cc) == len(set(email.to + email.cc)))
+        self.assertTrue(len(email_soc.to + email_soc.cc) == len(set(email_soc.to + email_soc.cc)))
+        # ssh is not there, so we should get an error
+        self.assertTrue(EMAIL_HEADER_ERROR in email_error.subject)
+        # error email reach intended recipients
+        self.assertEqual(tuple(sorted(email_error.to)), tuple(sorted([*contacts.EMAILS_STAFF])))
+        self.assertEqual(
+            sorted(email_error.cc),
+            sorted([*(contacts.EMAILS_STAFF - set(email_error.to))]),
+        )
+        # no double emails
+        self.assertTrue(len(email_error.to + email_error.cc) == len(set(email_error.to + email_error.cc)))
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
@@ -289,12 +313,24 @@ class ConfigurationEmailTest(TestCase):
         config = Configuration.objects.filter(model="H6").first()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 1)
-        self.assertTrue(any(recipient in contacts.EMAILS_MOC for recipient in mail.outbox[0].to))
+
+        # email reach intended recipients
+        email = mail.outbox[0]
+        self.assertEqual(tuple(sorted(email.to)), tuple(sorted([*contacts.EMAILS_MOC])))
+        self.assertEqual(
+            sorted(email.cc),
+            sorted([*(contacts.EMAILS_STAFF - set(email.to))]),
+        )
+        # no double emails
+        self.assertTrue(len(email.to + email.cc) == len(set(email.to + email.cc)))
+
+        # configuration was recorded
         self.assertEqual(Configuration.objects.filter(model="H6").count(), 1)
         self.assertIsNotNone(config)
         self.assertIsNone(config.asic1)
 
         self.client_soc.logout()
+        mail.outbox.clear()
 
         past_time = timezone.now() - timezone.timedelta(days=1)
         config.submit_time = past_time
@@ -310,6 +346,17 @@ class ConfigurationEmailTest(TestCase):
         )
         self.assertTemplateUsed(response, "configs/commit_success.html")
 
+        # email reach intended recipients
+        email = mail.outbox[0]
+        self.assertEqual(tuple(sorted(email.to)), tuple(sorted([*contacts.EMAILS_SOC])))
+        self.assertEqual(
+            sorted(email.cc),
+            sorted([*(contacts.EMAILS_STAFF - set(email.to))]),
+        )
+        # no double emails
+        self.assertTrue(len(email.to + email.cc) == len(set(email.to + email.cc)))
+
+        # configuration was indeed updated
         config.refresh_from_db()
         self.assertTrue(config.uplinked)
         self.assertIsNotNone(config.uplink_time)

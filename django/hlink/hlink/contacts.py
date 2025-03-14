@@ -15,6 +15,6 @@ def _get_and_validate_emails(env_key: str) -> set[str]:
     return set(emails)
 
 
-EMAILS_ADMIN = _get_and_validate_emails("CONTACTS_EMAILS_ADMIN")
+EMAILS_STAFF = _get_and_validate_emails("CONTACTS_EMAILS_STAFF")
 EMAILS_MOC = _get_and_validate_emails("CONTACTS_EMAILS_MOC")
 EMAILS_SOC = _get_and_validate_emails("CONTACTS_EMAILS_SOC")

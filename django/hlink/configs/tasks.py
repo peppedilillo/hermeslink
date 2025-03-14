@@ -24,12 +24,24 @@ from paramiko import ssh_exception
 
 from hlink import contacts
 from hlink import settings
+from hlink.contacts import EMAILS_STAFF
 
 logger = logging.getLogger("hlink")
 
 
 EMAIL_HEADER_ERROR = "[HermesLink] ERROR"
 
+
+def recipients(to: set, cc: set) -> dict[str, list[str]]:
+    """
+    The idea is that users in admin list receive all emails.
+    This will remove duplicates, preserve tos, and sorts cc so that admins ccs appear last.
+    """
+    cc = sorted(list((set(cc) | contacts.EMAILS_STAFF) - to), key=lambda u: u not in cc)
+    return {
+        "to": [*to],
+        "cc": cc,
+    }
 
 def email_error_to_admin(
     error_message: str,
@@ -59,7 +71,7 @@ def email_error_to_admin(
             subject=subject,
             body=body,
             from_email=settings.EMAIL_HOST_USER,
-            to=contacts.EMAILS_ADMIN,
+            **recipients(contacts.EMAILS_STAFF, set()),
         )
         email.send()
     except SMTPException:
@@ -147,7 +159,7 @@ def parse_remote_asic1_path(
     return f"{dirpath_remote_log}{dirname}configs/asic1_id{config_id}.cfg"
 
 
-def email_uplink_to_soc(
+def email_caldb_update_to_admin(
     config_id: int,
     model: Literal[*SPACECRAFTS_NAMES],
     remote_asic1_path: str,
@@ -162,8 +174,7 @@ def email_uplink_to_soc(
         f"Username: {username}\n\n"
         f"This is an automated message from Hermes Link",
         from_email=settings.EMAIL_HOST_USER,
-        to=contacts.EMAILS_SOC,
-        cc=contacts.EMAILS_ADMIN - contacts.EMAILS_SOC,
+        **recipients(contacts.EMAILS_STAFF, set()),
     )
     try:
         email.send()
@@ -315,7 +326,7 @@ def ssh_update_caldb(
             )
 
         logger.info(f"Successfully launched CALDB update for configuration {config_id}{' (dryrun)' if dryrun else ''}.")
-        return email_uplink_to_soc(config_id, config.model, remote_asic1_path, shell_cmd, username)
+        return email_caldb_update_to_admin(config_id, config.model, remote_asic1_path, shell_cmd, username)
 
 
 @shared_task(
@@ -368,8 +379,7 @@ def email_config_to_moc(
                 subject=f"[HERMES] {config.model} Payload Configuration Update - {config_id}",
                 body=email_body,
                 from_email=settings.EMAIL_HOST_USER,
-                to=contacts.EMAILS_MOC,
-                cc=set(cc) | (contacts.EMAILS_ADMIN - contacts.EMAILS_MOC),
+                **recipients(contacts.EMAILS_MOC, set(cc))
             )
             dirname = f"{config.filestring()}"
             archive_content = write_archive(config, "zip", dirname=dirname)
@@ -400,6 +410,76 @@ def email_config_to_moc(
             "email_config_to_moc",
             config_id,
         )
+
+
+@shared_task(
+    bind=True,
+    autoretry_for=(SMTPException,),
+    retry_backoff=True,
+    retry_kwargs={"max_retries": 5},
+    retry_jitter=True,
+)
+def email_uplink_to_soc(
+    self,
+    config_id: int,
+    cc: list[str],
+    domain: str,
+    protocol: str,
+):
+    """
+    Sends an email notification when an uplink time gets submitted.
+    """
+    try:
+        config = Configuration.objects.get(pk=config_id)
+    except Configuration.DoesNotExist:
+        return log_error_and_notify_admin(
+            logging.WARNING,
+            f"Configuration {config_id} not found",
+            "email_uplink_to_soc",
+            config_id,
+        )
+    if not config.uplinked:
+        return log_error_and_notify_admin(
+            logging.WARNING,
+            f"Configuration {config_id} has not been uplinked.",
+            "email_uplink_to_soc",
+            config_id,
+        )
+
+    model = config.model
+    email_body = render_to_string(
+        "configs/commit_email.html",
+        context={
+            "config": config,
+            "timezone": settings.TIME_ZONE,
+            "submission_date": config.submit_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "uplink_date": config.uplink_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "files": ", ".join(config.non_null_configs_keys()),
+            "asic1": True if config.asic1 is not None else False,
+            "domain": domain,
+            "protocol": protocol,
+        },
+    )
+    email = EmailMessage(
+        subject=f"[HERMES] {model} New uplink time committed for configuration {config_id}",
+        body=email_body,
+        from_email=settings.EMAIL_HOST_USER,
+        **recipients(contacts.EMAILS_SOC, set(cc)),
+    )
+    try:
+        email.send()
+    except SMTPException:
+        logging.error(f"Failed to send an email informing the SOC of a uplink timestamp commit: {email}")
+        return
+    except Exception as e:
+        return log_error_and_notify_admin(
+            logging.WARNING,
+            f"An unexpected error while I was trying to send an email informing the SOC of a uplink timestamp commit: {e}",
+            "email_uplink_to_soc",
+            config_id,
+        )
+    logger.info(f"Sent an email informing the SOC of a new uplink timestamp commit for configuration {config_id}.")
+    return
 
 
 @shared_task

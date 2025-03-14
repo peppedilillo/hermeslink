@@ -16,7 +16,7 @@ from unittest.mock import patch
 
 from configs.models import Configuration
 from configs.tasks import email_error_to_admin
-from configs.tasks import email_uplink_to_soc
+from configs.tasks import email_caldb_update_to_admin
 from configs.tasks import log_error_and_notify_admin
 from configs.tasks import ssh_update_caldb
 from django.contrib.auth import get_user_model
@@ -86,8 +86,8 @@ class TasksTest(TestCase):
             log_error_and_notify_admin(logging.WARNING, "Test warning message", "test_task_name", 42)
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
-        self.assertTrue(len(email.to) == len(contacts.EMAILS_ADMIN))
-        self.assertTrue(all(x == y for x, y in zip(email.to, contacts.EMAILS_ADMIN)))
+        self.assertTrue(len(email.to) == len(contacts.EMAILS_STAFF))
+        self.assertTrue(all(x == y for x, y in zip(email.to, contacts.EMAILS_STAFF)))
 
     def test_parse_update_caldb_command(self):
         """Test CALDB update command generation."""
@@ -108,7 +108,7 @@ class TasksTest(TestCase):
         username = "username"
 
         # Call the function
-        email_uplink_to_soc(config_id, model, filepath, command, username)
+        email_caldb_update_to_admin(config_id, model, filepath, command, username)
 
         # Check email was sent
         self.assertEqual(len(mail.outbox), 1)
@@ -126,8 +126,12 @@ class TasksTest(TestCase):
 
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
-        self.assertTrue(len(email.to) == len(contacts.EMAILS_SOC))
-        self.assertTrue(all(x == y for x, y in zip(email.to, contacts.EMAILS_SOC)))
+        # the email gets to the intended recipients
+        self.assertEqual(tuple(sorted(email.to)), tuple(sorted([*contacts.EMAILS_STAFF])))
+        # not any recipients in tos are in ccs too
+        self.assertTrue(not any(c in email.cc for c in contacts.EMAILS_STAFF))
+        # no double emails
+        self.assertTrue(len(email.to + email.cc) == len(set(email.to + email.cc)))
 
     @patch("configs.tasks.paramiko.SSHClient")
     def test_ssh_update_caldb(self, mock_ssh_client):

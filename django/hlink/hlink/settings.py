@@ -156,6 +156,10 @@ DATABASES = {
 }
 
 # p. logging
+ADMINS = [
+    ("Peppe", "peppedilillo@gmail.com"),
+]
+
 # p. The environment variable `LOG_DIR` is defined in dockerfile.
 LOG_DIR = Path(os.environ.get("LOG_DIR"))
 
@@ -180,6 +184,11 @@ LOGGING = {
             "backupCount": 30,
             "formatter": "standard",
         },
+        "mail_admins": {
+            "level": "ERROR",
+            "class": "django.utils.log.AdminEmailHandler",
+            "include_html": True,
+        },
     },
     "formatters": {
         "standard": {"format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"},
@@ -191,7 +200,7 @@ LOGGING = {
             "propagate": True,
         },
         "": {
-            "handlers": ["console", "file"] if not TESTING else ["null"],
+            "handlers": ["console", "file", "mail_admins"] if not TESTING else ["null"],
             "level": "INFO",
         },
     },

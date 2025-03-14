@@ -12,7 +12,7 @@ from configs.reports import write_test_report_html
 from configs.search import interpret_search_query
 from configs.search import InterpreterError
 from configs.search import ParseError
-from configs.tasks import email_config_to_moc
+from configs.tasks import email_config_to_moc, email_uplink_to_soc
 from configs.tasks import ssh_update_caldb
 from configs.validators import Status
 from configs.validators import validate_configurations
@@ -27,7 +27,7 @@ from django.shortcuts import redirect
 from django.shortcuts import render
 from hermes import CONFIG_TYPES
 from hermes import SPACECRAFTS_NAMES
-from hlink.contacts import EMAILS_ADMIN
+from hlink.contacts import EMAILS_STAFF
 
 logger = logging.getLogger("hlink")
 
@@ -211,7 +211,7 @@ def submit(request: HttpRequest) -> HttpResponse:
                     "configs/submit_error.html",
                     {
                         "error": "Compromised input integrity.",
-                        "contact_admin": ", ".join(EMAILS_ADMIN),
+                        "contact_admin": ", ".join(EMAILS_STAFF),
                     },
                 )
             except Exception as e:
@@ -221,7 +221,7 @@ def submit(request: HttpRequest) -> HttpResponse:
                     "configs/submit_error.html",
                     {
                         "error": "An unexpected error occurred.",
-                        "contact_admin": ", ".join(EMAILS_ADMIN),
+                        "contact_admin": ", ".join(EMAILS_STAFF),
                     },
                 )
             logger.info(f"A new configuration with id {config.id} was submitted by user {request.user.username}.")
@@ -258,8 +258,14 @@ def commit(request, config_id: int):
                 form.save()
             except Exception as e:
                 logger.error(f"Unexpected error committing uplink time: {str(e)}")
-                return render(request, "configs/commit_error.html", context={"contact_admin": ", ".join(EMAILS_ADMIN)})
+                return render(request, "configs/commit_error.html", context={"contact_admin": ", ".join(EMAILS_STAFF)})
 
+            email_uplink_to_soc.delay(
+                config_id=config.id,
+                cc=[],
+                domain=get_current_site(request).domain,
+                protocol="https" if request.is_secure() else "http",
+            )
             if config.asic1 is not None:
                 ssh_update_caldb.delay(config_id=config_id)
             logger.info(f"An uplink time has been committed for configuration {config.id} by {request.user.username}.")
