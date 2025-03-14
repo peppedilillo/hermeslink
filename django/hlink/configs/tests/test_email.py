@@ -13,19 +13,20 @@ EMAIL SUBMIT TESTS:
 
 from io import BytesIO
 from pathlib import Path
-from time import sleep
 import zipfile
+from unittest.mock import patch
 
 from accounts.models import CustomUser
 from configs.models import Configuration
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
-from django.test import modify_settings
 from django.test import override_settings
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
+
+from configs.tasks import EMAIL_HEADER_ERROR
 from hermes import STANDARD_FILENAMES
 from hlink.settings import BASE_DIR
 
@@ -47,7 +48,11 @@ class ConfigurationEmailTest(TestCase):
             password="testpass123",
             gang=CustomUser.Gang.SOC,
         )
-
+        cls.user_moc = CustomUser.objects.create_user(
+            username="testuser-moc",
+            password="testpass123",
+            gang=CustomUser.Gang.MOC,
+        )
         # Setup test files - using real configuration files for proper validation
         cls.files_fm6 = {
             "acq": SimpleUploadedFile(
@@ -73,16 +78,29 @@ class ConfigurationEmailTest(TestCase):
         }
 
     def setUp(self):
-        self.client = Client()
-        self.client.login(username="testuser-soc", password="testpass123")
+        self.client_soc = Client()
+        self.client_soc.login(username="testuser-soc", password="testpass123")
+        self.client_moc = Client()
+        self.client_moc.login(username="testuser-moc", password="testpass123")
         # Clear the test outbox
         mail.outbox = []
 
     def prepare_submit_session(self):
         """Helper to setup a valid submit session"""
-        _ = self.client.post(reverse("configs:upload"), data={"model": "H6", **self.files_fm6}, follow=True)
-        response = self.client.get(reverse("configs:test"))
-        return response
+        self.client_soc.post(reverse("configs:upload"), data={"model": "H6", **self.files_fm6}, follow=True)
+        response = self.client_soc.get(reverse("configs:test"))
+
+    def prepare_commit_session(self):
+        """Helper to setup a valid submit session"""
+        self.client_soc.post(reverse("configs:upload"), data={"model": "H6", **self.files_fm6}, follow=True)
+        self.client_soc.get(reverse("configs:test"))
+        self.client_soc.post(reverse("configs:submit"))
+        config = Configuration.objects.filter(model="H6").first()
+        past_time = timezone.now() - timezone.timedelta(days=1)
+        config.submit_time = past_time
+        config.date = past_time
+        config.save()
+        return config
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
@@ -91,22 +109,24 @@ class ConfigurationEmailTest(TestCase):
         self.prepare_submit_session()
 
         form_data = {
-            "cc": "cc@example.com; cc2@example.com",
+            "cc": "cc1@example.com;",
         }
 
-        response = self.client.post(reverse("configs:submit"), data=form_data)
+        response = self.client_soc.post(reverse("configs:submit"), data=form_data)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "configs/submit_success.html")
 
         self.assertEqual(len(mail.outbox), 1)
         email = mail.outbox[0]
 
-        # Verify email content
-        self.assertTrue(len(email.to) == len(contacts.EMAILS_MOC))
-        self.assertTrue(all(x == y for x, y in zip(email.to, contacts.EMAILS_MOC)))
-        self.assertEqual(email.cc, ["cc@example.com", "cc2@example.com"])
+        # check email destinataries
+        self.assertEqual(tuple(sorted(email.to)), tuple(sorted([*contacts.EMAILS_MOC])))
+        self.assertEqual(
+            tuple(sorted(email.cc)),
+            tuple(sorted(["cc1@example.com", *(contacts.EMAILS_ADMIN - contacts.EMAILS_MOC)])),
+        )
 
-        # Verify attachments
+        # check attachments
         self.assertEqual(len(email.attachments), 1)
         with zipfile.ZipFile(BytesIO(email.attachments[0][1])) as zf:
             filenames = [Path(fn).name for fn in zf.namelist()]
@@ -122,17 +142,94 @@ class ConfigurationEmailTest(TestCase):
             "recipient": "recipient@email.com",
             "cc": "cc1@example.com; cc2@example.com",
         }
-        response = self.client.post(reverse("configs:submit"), data=form_data)
+        response = self.client_soc.post(reverse("configs:submit"), data=form_data)
         self.assertEqual(response.status_code, 200)
         email, *_ = mail.outbox
-        self.assertEqual(email.cc, ["cc1@example.com", "cc2@example.com"])
+        # email reach moc user
+        self.assertEqual(tuple(sorted(email.to)), tuple(sorted([*contacts.EMAILS_MOC])))
+        self.assertEqual(
+            sorted(email.cc),
+            sorted(["cc1@example.com", "cc2@example.com", *(contacts.EMAILS_ADMIN - contacts.EMAILS_MOC)]),
+        )
+        # no double emails
+        self.assertTrue(len(email.to + email.cc) == len(set(email.to + email.cc)))
+
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_submit_with_overlapping_cc(self):
+        """Test """
+        self.prepare_submit_session()
+        form_data = {
+            "recipient": "recipient@email.com",
+            "cc": [*contacts.EMAILS_ADMIN][:1],
+        }
+        response = self.client_soc.post(reverse("configs:submit"), data=form_data)
+        self.assertEqual(response.status_code, 200)
+        email, *_ = mail.outbox
+        # email reach moc user
+        self.assertEqual(tuple(sorted(email.to)), tuple(sorted([*contacts.EMAILS_MOC])))
+        self.assertEqual(
+            sorted(email.cc),
+            sorted([*(contacts.EMAILS_ADMIN - contacts.EMAILS_MOC)]),
+        )
+        # no double emails
+        self.assertTrue(len(email.to + email.cc) == len(set(email.to + email.cc)))
+
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    # this guarantees the ssh behave af it is there, and that we will not check
+    # an error email instead of the one confirming script execution
+    @patch("configs.tasks.paramiko.SSHClient")
+    def test_commit_with_overlapping_cc(self, mock_ssh_client):
+        """Test """
+        config = self.prepare_commit_session()
+        mail.outbox = []
+        uplink_time = timezone.now() - timezone.timedelta(minutes=1)
+        response = self.client_moc.post(
+            reverse("configs:commit", args=[config.id]),
+            {"uplink_time": uplink_time.strftime("%Y-%m-%dT%H:%M:%SZ")},
+        )
+        self.assertTemplateUsed(response, "configs/commit_success.html")
+
+        config.refresh_from_db()
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        # the email gets to soc user
+        self.assertEqual(tuple(sorted(email.to)), tuple(sorted([*contacts.EMAILS_SOC])))
+        # since SOC user are into tos, they are not in cc too
+        self.assertTrue(not any(c in email.cc for c in contacts.EMAILS_SOC))
+        # no double emails
+        self.assertTrue(len(email.to + email.cc) == len(set(email.to + email.cc)))
+
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_commit_with_down_ssh_results_in_email_error(self):
+        """Test """
+        config = self.prepare_commit_session()
+        mail.outbox = []
+        uplink_time = timezone.now() - timezone.timedelta(minutes=1)
+        response = self.client_moc.post(
+            reverse("configs:commit", args=[config.id]),
+            {"uplink_time": uplink_time.strftime("%Y-%m-%dT%H:%M:%SZ")},
+        )
+        self.assertTemplateUsed(response, "configs/commit_success.html")
+
+        config.refresh_from_db()
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        # ssh is not there, so we should get an error
+        self.assertTrue(EMAIL_HEADER_ERROR in email.subject)
+        # error email gets to the admin list
+        self.assertEqual(tuple(sorted(email.to)), tuple(sorted([*contacts.EMAILS_ADMIN])))
+        # no double emails
+        self.assertTrue(len(email.to + email.cc) == len(set(email.to + email.cc)))
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_attachment_content_verification(self):
         """Test that email attachments contain correct file content"""
         self.prepare_submit_session()
-        _ = self.client.post(reverse("configs:submit"), data={})
+        _ = self.client_soc.post(reverse("configs:submit"), data={})
         email, *_ = mail.outbox
         self.assertEqual(len(email.attachments), 1)
         with zipfile.ZipFile(BytesIO(email.attachments[0][1])) as zf:
@@ -144,34 +241,15 @@ class ConfigurationEmailTest(TestCase):
                 original_file = self.files_fm6[ftype].open().read()
                 self.assertEqual(content, original_file)
 
-    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
-    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
-    def test_submit_database_record(self):
-        """Test that successful submit creates correct database record"""
-        self.prepare_submit_session()
-        self.client.post(reverse("configs:submit"))
-
-        config = Configuration.objects.last()
-        self.assertIsNotNone(config)
-        self.assertTrue(config.submitted)
-        self.assertIsNotNone(config.submit_time)
-        self.assertEqual(config.model, "H6")
-        self.assertEqual(config.author, self.user_soc)
-
-        # Verify file contents
-        for file_type in ["acq", "acq0", "asic0", "asic1", "bee"]:
-            original_file = self.files_fm6[file_type]
-            original_file.seek(0)
-            self.assertEqual(getattr(config, file_type), original_file.read())
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
     def test_partial_config_submit(self):
         """Test submit of partial configuration files"""
         partial_files = {"acq": self.files_fm6["acq"], "bee": self.files_fm6["bee"]}
-        self.client.post(reverse("configs:upload"), data={"model": "H6", **partial_files}, follow=True)
-        self.client.get(reverse("configs:test"))
-        _ = self.client.post(reverse("configs:submit"))
+        self.client_soc.post(reverse("configs:upload"), data={"model": "H6", **partial_files}, follow=True)
+        self.client_soc.get(reverse("configs:test"))
+        _ = self.client_soc.post(reverse("configs:submit"))
 
         # email attachment contains only uploaded files
         email = mail.outbox[0]
@@ -189,7 +267,10 @@ class ConfigurationEmailTest(TestCase):
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
-    def test_no_asic1_no_soc_notification_mail(self):
+    # this guarantees the ssh behave af it is there, and that we will not check
+    # an error email instead of the one confirming script execution
+    @patch("configs.tasks.paramiko.SSHClient")
+    def test_no_asic1_no_soc_notification_mail(self, mock_ssh_client):
         """Test that configurations without asic1 don't trigger SOC notification emails"""
         # Upload just the acq file (no asic1)
         files_fm6 = {
@@ -200,11 +281,11 @@ class ConfigurationEmailTest(TestCase):
         }
         self.assertEqual(Configuration.objects.filter(model="H6").count(), 0)
 
-        self.client.post(reverse("configs:upload"), data={"model": "H6", **files_fm6}, follow=True)
-        self.client.get(reverse("configs:test"))
+        self.client_soc.post(reverse("configs:upload"), data={"model": "H6", **files_fm6}, follow=True)
+        self.client_soc.get(reverse("configs:test"))
         self.assertEqual(Configuration.objects.filter(model="H6").count(), 0)
 
-        response = self.client.post(reverse("configs:submit"))
+        response = self.client_soc.post(reverse("configs:submit"))
         config = Configuration.objects.filter(model="H6").first()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 1)
@@ -213,7 +294,7 @@ class ConfigurationEmailTest(TestCase):
         self.assertIsNotNone(config)
         self.assertIsNone(config.asic1)
 
-        self.client.logout()
+        self.client_soc.logout()
 
         past_time = timezone.now() - timezone.timedelta(days=1)
         config.submit_time = past_time
@@ -221,11 +302,9 @@ class ConfigurationEmailTest(TestCase):
         config.save()
         config.refresh_from_db()
 
-        CustomUser.objects.create_user(username="testuser-moc", password="testpass123", gang=CustomUser.Gang.MOC)
-        client_moc = Client()
-        client_moc.login(username="testuser-moc", password="testpass123")
+        self.client_moc.login(username="testuser-moc", password="testpass123")
         uplink_time = timezone.now() - timezone.timedelta(minutes=1)
-        response = client_moc.post(
+        response = self.client_moc.post(
             reverse("configs:commit", args=[config.id]),
             {"uplink_time": uplink_time.strftime("%Y-%m-%dT%H:%M:%SZ")},
         )

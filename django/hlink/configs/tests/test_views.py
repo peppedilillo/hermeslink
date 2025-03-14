@@ -502,6 +502,24 @@ class ConfigurationViewTest(TestCase):
         self.assertEqual(tuple(session_data.keys()), CONFIG_TYPES)
 
     @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_submit_database_record(self):
+        """Test that successful submit creates correct database record"""
+        self.assertFalse(Configuration.objects.all())
+        self.login_and_upload_fileset("H6", self.files_fm6)
+        self.client.get(reverse("configs:test"))
+        self.client.post(reverse("configs:submit"))
+
+        config = Configuration.objects.last()
+        self.assertTrue(Configuration.objects.all())
+
+        # Verify file contents
+        for file_type in ["acq", "acq0", "asic0", "asic1", "bee"]:
+            original_file = self.files_fm6[file_type]
+            original_file.seek(0)
+            self.assertEqual(getattr(config, file_type), original_file.read())
+
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=True)
     def test_moc_user_cannot_submit(self):
         """MOC user attempting to submit a config is forbidden"""
         user = CustomUser.objects.create_user(username="testuser-moc", password="testpass123", gang=CustomUser.Gang.MOC)

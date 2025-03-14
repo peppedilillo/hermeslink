@@ -28,6 +28,9 @@ from hlink import settings
 logger = logging.getLogger("hlink")
 
 
+EMAIL_HEADER_ERROR = "[HermesLink] ERROR"
+
+
 def email_error_to_admin(
     error_message: str,
     task_name: str,
@@ -41,7 +44,7 @@ def email_error_to_admin(
         task_name: Name of the task that encountered the error
         config_id: Optional configuration ID related to the error
     """
-    subject = f"[HERMES] ERROR: {task_name}" + (f" - Config #{config_id}" if config_id else "")
+    subject = f"{EMAIL_HEADER_ERROR}: {task_name}" + (f" - Config #{config_id}" if config_id else "")
 
     body = (
         f"Task: {task_name}\n"
@@ -160,6 +163,7 @@ def email_uplink_to_soc(
         f"This is an automated message from Hermes Link",
         from_email=settings.EMAIL_HOST_USER,
         to=contacts.EMAILS_SOC,
+        cc=contacts.EMAILS_ADMIN - contacts.EMAILS_SOC,
     )
     try:
         email.send()
@@ -364,8 +368,8 @@ def email_config_to_moc(
                 subject=f"[HERMES] {config.model} Payload Configuration Update - {config_id}",
                 body=email_body,
                 from_email=settings.EMAIL_HOST_USER,
-                cc=cc,
                 to=contacts.EMAILS_MOC,
+                cc=set(cc) | (contacts.EMAILS_ADMIN - contacts.EMAILS_MOC),
             )
             dirname = f"{config.filestring()}"
             archive_content = write_archive(config, "zip", dirname=dirname)
