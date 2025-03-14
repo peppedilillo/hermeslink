@@ -18,7 +18,7 @@ import zipfile
 
 from accounts.models import CustomUser
 from configs.models import Configuration
-from configs.tasks import EMAIL_HEADER_ERROR
+from configs.tasks import EMAIL_HEADER_STAFF_ERROR
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
@@ -203,7 +203,7 @@ class ConfigurationEmailTest(TestCase):
         # error email reach intended recipients
         self.assertEqual(tuple(sorted(email_caldb.to)), tuple(sorted([*contacts.EMAILS_STAFF])))
         # we mocking ssh so we expect no error
-        self.assertFalse(EMAIL_HEADER_ERROR in email_caldb.subject)
+        self.assertFalse(EMAIL_HEADER_STAFF_ERROR in email_caldb.subject)
         self.assertEqual(
             sorted(email_caldb.cc),
             sorted([*(contacts.EMAILS_STAFF - set(email_caldb.to))]),
@@ -237,7 +237,7 @@ class ConfigurationEmailTest(TestCase):
         # no double emails
         self.assertTrue(len(email_soc.to + email_soc.cc) == len(set(email_soc.to + email_soc.cc)))
         # ssh is not there, so we should get an error
-        self.assertTrue(EMAIL_HEADER_ERROR in email_error.subject)
+        self.assertTrue(EMAIL_HEADER_STAFF_ERROR in email_error.subject)
         # error email reach intended recipients
         self.assertEqual(tuple(sorted(email_error.to)), tuple(sorted([*contacts.EMAILS_STAFF])))
         self.assertEqual(

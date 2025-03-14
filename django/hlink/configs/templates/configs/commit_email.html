@@ -8,11 +8,7 @@ Uplink Date: {{ uplink_date }} ({{ timezone }})
 Files: {{ files }}
 
 You can check the configuration history at: {{ protocol }}://{{ domain }}{% url 'configs:history' %}
-{% if asic1 %}
-    A CALDB update has been automatically launched for this configuration.
-{% else %}
-    Since this configuration does not contain an asic1 file, no CALDB update will be executed.
-{% endif %}
+{% if asic1 %}A CALDB update has been automatically launched for this configuration.{% else %}Since this configuration does not contain an asic1 file, no CALDB update will be executed.{% endif %}
 
 Best regards,
 Mission Operations Team

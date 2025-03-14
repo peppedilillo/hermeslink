@@ -16,7 +16,6 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from hermes import CONFIG_SIZE
 from hermes import SPACECRAFTS_NAMES
-from hlink.contacts import EMAILS_STAFF
 from influxdb_client import InfluxDBClient
 from influxdb_client import Point
 from influxdb_client.client.write_api import SYNCHRONOUS
@@ -28,8 +27,9 @@ from hlink import settings
 
 logger = logging.getLogger("hlink")
 
-
-EMAIL_HEADER_ERROR = "[HermesLink] ERROR"
+EMAIL_HEADER = "[HermesLink]"
+EMAIL_HEADER_STAFF = "[HermesLink][STAFF]"
+EMAIL_HEADER_STAFF_ERROR = f"{EMAIL_HEADER_STAFF} ERROR"
 
 
 def recipients(to: set, cc: set) -> dict[str, list[str]]:
@@ -57,7 +57,7 @@ def email_error_to_admin(
         task_name: Name of the task that encountered the error
         config_id: Optional configuration ID related to the error
     """
-    subject = f"{EMAIL_HEADER_ERROR}: {task_name}" + (f" - Config #{config_id}" if config_id else "")
+    subject = f"{EMAIL_HEADER_STAFF_ERROR}: {task_name}" + (f" - Config #{config_id}" if config_id else "")
 
     body = (
         f"Task: {task_name}\n"
@@ -168,7 +168,7 @@ def email_caldb_update_to_admin(
     username: str,
 ):
     email = EmailMessage(
-        subject=f"[HERMES] {model} Automatic CALDB Update - {config_id}",
+        subject=f"{EMAIL_HEADER_STAFF} {model} Automatic CALDB update report - {config_id}",
         body=f"Hermes Link attempted running a CALDB update.\n\n"
         f"Configuration file remote path: {remote_asic1_path}\n"
         f"Script executed: {shell_cmd}\n"
@@ -377,7 +377,7 @@ def email_config_to_moc(
                 },
             )
             email = EmailMessage(
-                subject=f"[HERMES] {config.model} Payload Configuration Update - {config_id}",
+                subject=f"{EMAIL_HEADER} {config.model} Payload configuration update - {config_id}",
                 body=email_body,
                 from_email=settings.EMAIL_HOST_USER,
                 **recipients(contacts.EMAILS_MOC, set(cc)),
@@ -462,7 +462,7 @@ def email_uplink_to_soc(
         },
     )
     email = EmailMessage(
-        subject=f"[HERMES] {model} New uplink time committed for configuration {config_id}",
+        subject=f"{EMAIL_HEADER} {model} New uplink time committed for configuration {config_id}",
         body=email_body,
         from_email=settings.EMAIL_HOST_USER,
         **recipients(contacts.EMAILS_SOC, set(cc)),
