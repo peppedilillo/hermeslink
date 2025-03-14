@@ -11,7 +11,7 @@ def post_login(sender, request, user, **kwargs):
 
 @receiver(user_logged_out)
 def post_logout(sender, request, user, **kwargs):
-    logger.warning(f'User: {user.username} logged out')
+    logger.warning(f'An user logged out')
 
 @receiver(user_login_failed)
 def post_login_fail(sender, credentials, request, **kwargs):
