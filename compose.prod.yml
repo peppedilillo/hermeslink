@@ -34,7 +34,8 @@ services:
              python manage.py collectstatic --noinput &&
              (celery -A hlink worker --loglevel=info &
               celery -A hlink beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler &
-             gunicorn hlink.wsgi:application --bind 0.0.0.0:8000)"
+             gunicorn hlink.wsgi:application --bind 0.0.0.0:8000) &&
+             python manage.py say_hi"
     volumes:
       - static_volume:/home/app/static/staticfiles
       - media_volume:/home/app/static/mediafiles
