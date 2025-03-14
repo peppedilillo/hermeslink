@@ -26,7 +26,7 @@ urlpatterns = [
     path("configs/", include("configs.urls")),
     path("accounts/", include("accounts.urls")),
     path("accounts/", include("django.contrib.auth.urls")),
-    path("admin/", admin.site.urls),
+    path("abra-kadabra-alakazam/", admin.site.urls),
 ]
 
 # p. we do not install the debug toolbar when testing or running in production
