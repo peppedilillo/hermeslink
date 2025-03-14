@@ -1,4 +1,5 @@
 from datetime import timedelta
+import logging
 
 from django.conf import settings
 from django.contrib.auth import get_user
@@ -7,6 +8,10 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from ipware import get_client_ip
 from redis import Redis
+
+
+logger = logging.getLogger("hlink")
+
 
 PERIOD = timedelta(seconds=10)
 AUTHENTICATED_LIMIT = 20
@@ -63,6 +68,7 @@ def rate_limiter(get_response):
             identifier, limit, period = get_request_identifier(request)
             rate_limit_key = f"{identifier}:{request.path}:post"
             if request_is_limited(redis_default, rate_limit_key, limit, period):
+                logger.warning(f"A request for '{request.path}' has been due to rate limit exceeded.")
                 return render(request, "429.html", status=429)
         response = get_response(request)
         return response

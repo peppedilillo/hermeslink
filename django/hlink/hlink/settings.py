@@ -165,23 +165,19 @@ LOGGING = {
     "handlers": {
         "null": {
             "class": "logging.NullHandler",
-            "level": "INFO",
         },
         "cache": {
             "class": "logger.handlers.CacheHandler",
-            "level": "INFO",
         },
         "console": {
             "class": "logging.StreamHandler",
-            "level": "INFO",
             "formatter": "standard",
         },
         "file": {
             "class": "logging.handlers.TimedRotatingFileHandler",
-            "level": "INFO",
             "filename": LOG_DIR / "hlink.log",
             "when": "midnight",
-            "backupCount": 60,
+            "backupCount": 30,
             "formatter": "standard",
         },
     },
@@ -190,8 +186,9 @@ LOGGING = {
     },
     "loggers": {
         "hlink": {
-            "handlers": ["console", "cache", "file"] if not TESTING else ["null"],
-            "level": "INFO",
+            "handlers": ["cache"] if not TESTING else ["null"],
+            "level": "DEBUG",
+            "propagate": True,
         },
         "": {
             "handlers": ["console", "file"] if not TESTING else ["null"],

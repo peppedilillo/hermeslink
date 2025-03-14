@@ -1,6 +1,4 @@
 from collections import OrderedDict
-from email import header
-from functools import partial
 from hashlib import sha256
 import logging
 from typing import Literal
