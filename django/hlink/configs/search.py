@@ -47,6 +47,7 @@ class TokenType(Enum):
     MODEL = auto()
     UPLINKED = auto()
     SUBMITTED = auto()
+    ID = auto()
 
     EQUAL = auto()
     BANG_EQUAL = auto()
@@ -64,6 +65,7 @@ class TokenType(Enum):
     RIGHT_PAREN = auto()
 
     DATETIME = auto()
+    NUMBER = auto()
     LITERAL = auto()
     TRUE = auto()
     FALSE = auto()
@@ -106,6 +108,7 @@ RESERVED_WORDS = (
     | {
         "uplinked": TokenType.UPLINKED,
         "submitted": TokenType.SUBMITTED,
+        "id": TokenType.ID,
         "by": TokenType.BY,
         "or": TokenType.OR,
         "and": TokenType.AND,
@@ -177,6 +180,8 @@ class Scanner:
         elif c.isdigit():
             if dt := self._catch_datetime():
                 self._add_token(Token(TokenType.DATETIME, dt))
+            elif num := self._catch_number():
+                self._add_token(Token(TokenType.NUMBER, num))
         else:
             literal = self._catch_literal()
 
@@ -219,7 +224,7 @@ class Scanner:
         """Returns previous character."""
         return self.text[self.current - 1]
 
-    def _catch_datetime(self):
+    def _catch_datetime(self) -> str:
         """Returns a datetime if it matches an allowd pattern, consuming it.
         Returns the empty string when no match."""
         for pattern, pattern_length in DATETIME_PATTERNS.items():
@@ -229,7 +234,12 @@ class Scanner:
                 return s
         return ""
 
-    def _catch_literal(self):
+    def _catch_number(self) -> str:
+        while self._peek().isdigit():
+            self._advance()
+        return self.text[self.start: self.current]
+
+    def _catch_literal(self) -> str:
         """Returns the next literal, consuming it."""
         while (next_char := self._peek()) and (next_char.isalnum() or next_char in ["_", "."]):
             self._advance()
@@ -353,8 +363,10 @@ class Parser:
     def _primary(self) -> Expression:
         if self._match({*RESERVED_WORDS_SPACECRAFT_NAMES.values()}):
             return Query(Token(TokenType.MODEL, "_model"), Token(TokenType.EQUAL, "_="), self._previous())
+
         elif self._match({*RESERVED_WORDS_CONFIGURATION_NAMES.values()}):
             return Query(self._previous(), Token(TokenType.ISNULL, "_isnull"), Token(TokenType.ISNULL, "_isnull"))
+
         elif noun := self._match({TokenType.SUBMITTED, TokenType.UPLINKED}):
             if predicate := self._match(
                 {
@@ -379,6 +391,27 @@ class Parser:
                     raise ParseError(f"An username is expected after '{noun.lexeme} {predicate.lexeme}' expression.")
             else:
                 return Query(noun, Token(TokenType.ISNULL, "_isnull"), Token(TokenType.ISNULL, "_isnull"))
+
+        elif noun := self._match({TokenType.ID}):
+            if predicate := self._match(
+                {
+                    TokenType.GREATER,
+                    TokenType.GREATER_EQUAL,
+                    TokenType.LESSER,
+                    TokenType.LESSER_EQUAL,
+                    TokenType.EQUAL,
+                    TokenType.BANG_EQUAL,
+                }
+            ):
+                if objective := self._match({TokenType.NUMBER}):
+                    return Query(noun, predicate, objective)
+                else:
+                    raise ParseError(
+                        f"A non-negative integer is expected after '{noun.lexeme} {predicate.lexeme}' expression."
+                    )
+            else:
+                raise ParseError(f"An ID query requires a comparison operator, e.g. id = 12, id > 22.")
+
         elif self._match({TokenType.LEFT_PAREN}):
             expr = self._expression()
             self._consume(TokenType.RIGHT_PAREN, "Expected ')' after expression")
@@ -492,13 +525,38 @@ class Interpreter:
 
             raise InterpreterError("Invalid model query")
 
-        if expr.key.ttype in {*RESERVED_WORDS_CONFIGURATION_NAMES_INVERSE}:
+        elif expr.key.ttype in {*RESERVED_WORDS_CONFIGURATION_NAMES_INVERSE}:
             if expr.operator.ttype == TokenType.ISNULL and expr.value.ttype == TokenType.ISNULL:
                 return Q(**{f"{RESERVED_WORDS_CONFIGURATION_NAMES_INVERSE[expr.key.ttype]}__isnull": False})
 
             raise InterpreterError("Invalid configuration query")
 
-        if expr.key.ttype in {TokenType.SUBMITTED, TokenType.UPLINKED}:
+        elif expr.key.ttype == TokenType.ID:
+            if expr.operator.ttype in {
+                TokenType.GREATER,
+                TokenType.GREATER_EQUAL,
+                TokenType.LESSER,
+                TokenType.LESSER_EQUAL,
+                TokenType.EQUAL,
+                TokenType.BANG_EQUAL,
+            }:
+                number = int(expr.value.lexeme)
+                if expr.operator.ttype == TokenType.GREATER:
+                    return Q(**{f"pk__gt": number})
+                elif expr.operator.ttype == TokenType.GREATER_EQUAL:
+                    return Q(**{f"pk__gte": number})
+                elif expr.operator.ttype == TokenType.LESSER:
+                    return Q(**{f"pk__lt": number})
+                elif expr.operator.ttype == TokenType.LESSER_EQUAL:
+                    return Q(**{f"pk__lte": number})
+                elif expr.operator.ttype == TokenType.EQUAL:
+                    return Q(**{"pk": number})
+                elif expr.operator.ttype == TokenType.BANG_EQUAL:
+                    return ~Q(**{"pk": number})
+
+                raise InterpreterError("Invalid ID query")
+
+        elif expr.key.ttype in {TokenType.SUBMITTED, TokenType.UPLINKED}:
             if expr.operator.ttype in {
                 TokenType.GREATER,
                 TokenType.GREATER_EQUAL,
