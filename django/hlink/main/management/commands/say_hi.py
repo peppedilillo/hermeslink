@@ -9,4 +9,4 @@ class Command(BaseCommand):
     help = "Setup periodic tasks"
 
     def handle(self, *args, **kwargs):
-        logger.info("I'm alive. Let's fucking go HERMES!!")
+        logger.info("I'm alive and well. Let's go HERMES!!")
