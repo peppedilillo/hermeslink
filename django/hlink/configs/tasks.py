@@ -377,7 +377,8 @@ def email_config_to_moc(
                 },
             )
             email = EmailMessage(
-                subject=f"{EMAIL_HEADER} {config.model} Payload configuration update - {config_id}",
+                # different formatting because this format is what we agreed on with the MOC
+                subject=f"[HERMES] {config.model} Payload Configuration Update - {config_id}",
                 body=email_body,
                 from_email=settings.EMAIL_HOST_USER,
                 **recipients(contacts.EMAILS_MOC, set(cc)),
