@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 {% block content %}
     <h2 class="font-bold text-4xl mb-6">Uplink time saved successfully!</h2>
-    <p class="mb-4">Your configuration has been updated.</p>
+    <p class="mb-4">The configuration has been updated.</p>
     {% if asic1 %}
         <p class="mb-8">
-            Since this configuration includes an ASIC1 file, the Science Operation Team has been notified, and an update of the calibration database has been initialized.
+            Since this configuration includes an <span class="font-mono">asic1.cfg</span> file, the calibration database update has been initiated.
         </p>
     {% else %}
         <p class="mb-8">
-            This configuration contains no ASIC1 file, hence no update of the calibration database will be performed.
+            This configuration does not include an <span class="font-mono">asic1.cfg</span> file; therefore, no calibration database update will be performed.
         </p>
     {% endif %}
     <a href="{% url 'configs:history' %}"

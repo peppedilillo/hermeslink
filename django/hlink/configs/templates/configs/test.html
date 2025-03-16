@@ -13,14 +13,14 @@
                 Please review your upload carefully before submission.
             </p>
         {% elif request.session.test_status == 1 %}
-            Your configuration contains <span class="text-yellow-500 font-bold">warnings</span> but can still be submitted.
+            Your configuration raised <span class="text-yellow-500 font-bold">warnings</span> but can still be submitted.
             <p class="text-sm text-gray-400 mt-2">
-                Please review the report below and address the warnings if possible before submitting.
+                Please review the test report and address these warnings before submitting.
             </p>
         {% elif request.session.test_status == 2 %}
-            Your configuration contains <span class="text-red-500 font-bold">errors</span> and cannot be submitted.
+            Your configuration raised <span class="text-red-500 font-bold">errors</span> and cannot be submitted.
             <p class="text-sm text-gray-400 mt-2">
-                Please review the report below, fix the identified errors, and upload a new configuration.
+                Please review the test report, fix the errors, and upload a new configuration.
             </p>
         {% endif %}
     </div>
@@ -29,7 +29,7 @@
     <h1 class="font-bold text-2xl mb-6">Test report:</h1>
 
     <p class="mb-6">
-        The test report below shows detailed validation results. This report will be included in the notification email sent to the Mission Operations Center.
+        The test validation results are presented in this report, which will be included in the notification email to the Mission Operations Center.
     </p>
     <div class="text-mono text-xs p-4 bg-gray-900 border-gray-700 border rounded-md max-h-[400px] overflow-auto">
         <pre>{{ results | safe }}</pre>

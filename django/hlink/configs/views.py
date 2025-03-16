@@ -225,7 +225,7 @@ def submit(request: HttpRequest) -> HttpResponse:
                         "contact_admin": ", ".join(EMAILS_STAFF),
                     },
                 )
-            logger.info(f"A new configuration with id {config.id} was submitted by user {request.user.username}.")
+            logger.info(f"A new configuration with ID {config.id} was submitted by user {request.user.username}.")
             return render(request, "configs/submit_success.html")
 
     form = forms.SubmitConfiguration()

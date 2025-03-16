@@ -8,7 +8,8 @@
         {% csrf_token %}
         <div class="my-6">
             <div class="mb-4">
-                Enter the UTC uplink time for this configuration. The Science Operations Center (SOC) will use this timestamp to properly calibrate scientific data.
+                Enter a UTC uplink time for this configuration.
+                The Science Operations Team will be notified of this operation. If the configuration includes an <span class="font-mono">asic1.cfg</span> file, the scientific calibration data processing pipeline will be automatically updated.
             </div>
 
             <div class="space-y-2">

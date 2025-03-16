@@ -189,7 +189,7 @@ def email_caldb_update_to_admin(
             "email_uplink_to_soc",
             config_id,
         )
-    logger.info(f"Sent an email informing the SOC of a CALDB update for configuration {config_id}.")
+    logger.info(f"An email has been sent to inform the SOC of a CALDB update for configuration {config_id}.")
     return
 
 
@@ -326,7 +326,7 @@ def ssh_update_caldb(
                 config_id,
             )
 
-        logger.info(f"Successfully launched CALDB update for configuration {config_id}{' (dryrun)' if dryrun else ''}.")
+        logger.info(f"CALDB update successfully launched for configuration {config_id}{' (dry run)' if dryrun else ''}.")
         return email_caldb_update_to_admin(config_id, config.model, remote_asic1_path, shell_cmd, username)
 
 
@@ -391,7 +391,7 @@ def email_config_to_moc(
             config.submitted = True
             config.submit_time = timestamp
             config.save()
-            logger.info(f"Sent an email informing the MOC of the submission of configuration {config_id}.")
+            logger.info(f"An email has been sent to inform the MOC of the submission of configuration {config_id}.")
             return
 
     except Configuration.DoesNotExist:
@@ -479,7 +479,7 @@ def email_uplink_to_soc(
             "email_uplink_to_soc",
             config_id,
         )
-    logger.info(f"Sent an email informing the SOC of a new uplink timestamp commit for configuration {config_id}.")
+    logger.info(f"An email has been sent to inform the SOC of a new uplink timestamp commit for configuration {config_id}.")
     return
 
 
