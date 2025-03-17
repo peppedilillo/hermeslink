@@ -3,7 +3,7 @@
 This is web application designed to enable communication between the HERMES-Pathfinder Mission and Science operation center.
 It is realized in python Django, and embeds a grafana dashboard service.
 
-### Running
+### Running Hermes Link
 
 For production:
 ```
