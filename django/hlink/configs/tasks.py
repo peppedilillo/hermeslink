@@ -482,39 +482,3 @@ def email_uplink_to_soc(
         )
     logger.info(f"An email has been sent to inform the SOC of a new uplink timestamp commit for configuration {config_id}.")
     return
-
-
-@shared_task
-def generate_sensor_data():
-    """
-    Generate and store sensor readings in InfluxDB.
-    This task replaces the functionality of the data-generator container.
-    """
-    from random import uniform
-
-    try:
-        client = InfluxDBClient(url=settings.INFLUXDB_URL, token=settings.INFLUXDB_TOKEN, org=settings.INFLUXDB_ORG)
-        write_api = client.write_api(write_options=SYNCHRONOUS)
-
-        data = {
-            "temperature": uniform(20.0, 30.0),
-            "humidity": uniform(30.0, 70.0),
-            "pressure": uniform(980.0, 1020.0),
-        }
-
-        point = (
-            Point("sensor_readings")
-            .field("temperature", data["temperature"])
-            .field("humidity", data["humidity"])
-            .field("pressure", data["pressure"])
-            .time(timezone.now())
-        )
-
-        write_api.write(bucket=settings.INFLUXDB_BUCKET, org=settings.INFLUXDB_ORG, record=point)
-
-        client.close()
-        return True
-
-    except Exception as e:
-        logger.error(f"Error writing to InfluxDB: {e}")
-        raise
