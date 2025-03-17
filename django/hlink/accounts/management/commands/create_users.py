@@ -49,3 +49,8 @@ class Command(BaseCommand):
                 self.stdout.write(f"Failed adding user {u.username} to database.")
                 raise
             self.stdout.write(f"Successfully added user {u.username}.")
+
+
+        usernames = '\n'.join([u.username for u in user_records])
+        self.stdout.write(f"Finished!\n\nRecap:\nusernames: {usernames}.")
+        self.stdout.write(f"\n\n emails: {'; '.join([u.email for u in user_records])}.")

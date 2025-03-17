@@ -181,6 +181,7 @@ cython_debug/
 .idea
 .DS_Store
 django/dev/
+django/hlink/.users
 **/repomix-output.txt
 django/hlink/scripts/tailwind-linux.sh
 django/hlink/scripts/tailwind-macos.sh

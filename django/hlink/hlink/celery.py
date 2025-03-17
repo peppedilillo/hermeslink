@@ -18,13 +18,3 @@ app.conf.beat_schedule = {
         "schedule": 300.0,
     },
 }
-
-if not settings.DEBUG:
-    app.conf.beat_schedule.update(
-        {
-            "add-every-30-seconds": {
-                "task": "configs.tasks.generate_sensor_data",
-                "schedule": 30.0,
-            },
-        }
-    )
