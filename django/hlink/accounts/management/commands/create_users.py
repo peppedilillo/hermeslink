@@ -37,7 +37,6 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         user_records = read_user_records(options['filename'])
         for u in user_records:
-            print(u)
             try:
                 CustomUser.objects.create_user(
                     username=u.username,
@@ -52,5 +51,5 @@ class Command(BaseCommand):
 
 
         usernames = '\n'.join([u.username for u in user_records])
-        self.stdout.write(f"Finished!\n\nRecap:\nusernames: {usernames}.")
-        self.stdout.write(f"\n\n emails: {'; '.join([u.email for u in user_records])}.")
+        self.stdout.write(f"Finished!\n\nRecap:\nusernames:\n {usernames}.")
+        self.stdout.write(f"\n\nemails: {'; '.join([u.email for u in user_records])}.")
