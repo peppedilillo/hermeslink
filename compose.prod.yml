@@ -6,6 +6,7 @@ services:
       - 443:443
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt
+      - /opt/certbot/wwwroot:/var/www/certbot
       - static_volume:/home/app/static/staticfiles
       - media_volume:/home/app/static/mediafiles
     depends_on:
