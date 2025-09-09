@@ -1,7 +1,8 @@
 # Hermes Link
 
 This is web application designed to enable communication between the HERMES-Pathfinder nanosatellite constellation Mission and Science operation center.
-It is realized in python Django, and embeds a grafana dashboard service.
+The applications lives at https://hermeslink.ssdc.asi.it/.
+It was realized in python Django, and embeds a grafana dashboard service.
 
 ### Running Hermes Link
 
@@ -27,7 +28,9 @@ To show the welcome message, run:
 python manage.py say_hi
 ```
 
-To add users, run:
+### Utilities
+
+To add test users, run:
 
 ```python
 python manage.py create_users userfile.txt
