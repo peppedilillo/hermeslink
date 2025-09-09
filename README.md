@@ -1,6 +1,6 @@
 # Hermes Link
 
-This is web application designed to enable communication between the HERMES-Pathfinder Mission and Science operation center.
+This is web application designed to enable communication between the HERMES-Pathfinder nanosatellite constellation Mission and Science operation center.
 It is realized in python Django, and embeds a grafana dashboard service.
 
 ### Running Hermes Link
