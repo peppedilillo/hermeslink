@@ -97,7 +97,7 @@ services:
     env_file:
       - .grafana.env
       - .influxdb.env
-    image: grafana/grafana:11.5.1
+    image: grafana/grafana:11.6.5
     expose:
       - 3000
     volumes:
