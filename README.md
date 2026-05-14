@@ -4,23 +4,40 @@ This is web application designed to enable communication between the HERMES-Path
 The applications lives at https://hermeslink.ssdc.asi.it/.
 It was realized in python Django, and embeds a grafana dashboard service.
 
-### Running Hermes Link
+## Running Hermes Link
 
-For production:
-```
-docker compose -f compose.prod.yml build
-docker compose -f compose.prod.yml up
-```
+### Development
 
-For development:
+Start docker:
+
 ```
 docker compose build
 docker compose up
 ```
 
-Both environment requires the settings of a number of dot files. Samples are provided as `sample.*.env` files or `sample.*.env.prod` files.
+Sets the dotfiles. Samples are provided as `sample.*.env` files or `sample.*.env.prod` files.
 
-### Commands
+```shell
+cp sample.django.env .django.env
+vim .django.env # fill
+... # repeat for other dotfiles
+```
+
+Check the container name for the hermeslink-web service, get a shell and create a superuser:
+
+```shell
+docker exec -it hermeslink-web bash
+python manage.py createsuperuser
+```
+
+### Production:
+
+```
+docker compose -f compose.prod.yml build
+docker compose -f compose.prod.yml up
+```
+
+## Commands
 
 To show the welcome message, run:
 
@@ -28,7 +45,9 @@ To show the welcome message, run:
 python manage.py say_hi
 ```
 
-### Utilities
+## Utilities
+
+### Test user
 
 To add test users, run:
 
@@ -37,3 +56,6 @@ python manage.py create_users userfile.txt
 ```
 
 See `accounts/management/commands/create_users.py` for more informations.
+
+### Test configurations
+
