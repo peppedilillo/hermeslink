@@ -1,6 +1,7 @@
 <!--Args:
     * `config`, a configuration object.
  -->
+{% load tz %}
 <div class="bg-gray-900 border-gray-700 border rounded-md p-4">
     <!-- Desktop view: Grid layout -->
     <div class="hidden lg:grid grid-cols-12 gap-6 text-sm">
@@ -19,7 +20,7 @@
         </div>
         <div class="col-span-3">
             <span class="text-gray-400">Submitted</span>
-            <p>{{ config.submit_time|date:"Y-m-d H:i"|default:"Not submitted" }}</p>
+            <p>{{ config.submit_time|utc|date:"Y-m-d\TH:i:s\Z"|default:"Not submitted" }}</p>
         </div>
         <div class="col-span-2">
             <span class="text-gray-400">Uplinked by</span>
@@ -34,7 +35,7 @@
             {% if not config.uplinked %}
                 <p>-</p>
             {% else %}
-                <p class="text-green-400 font-bold">{{ config.uplink_time|date:"Y-m-d H:i" }}</p>
+                <p class="text-green-400 font-bold">{{ config.uplink_time|utc|date:"Y-m-d\TH:i:s\Z" }}</p>
             {% endif %}
         </div>
     </div>
@@ -61,7 +62,7 @@
             </div>
             <div class="flex justify-between items-center">
                 <span class="text-gray-400">Submitted:</span>
-                <span>{{ config.submit_time|date:"Y-m-d H:i"|default:"Not submitted" }}</span>
+                <span>{{ config.submit_time|utc|date:"Y-m-d\TH:i:s\Z"|default:"Not submitted" }}</span>
             </div>
         </div>
 
@@ -80,7 +81,7 @@
                 {% if not config.uplinked %}
                     <span class="font-medium">-</span>
                 {% else %}
-                    <span class="text-green-400 font-bold">{{ config.uplink_time|date:"Y-m-d H:i" }}</span>
+                    <span class="text-green-400 font-bold">{{ config.uplink_time|utc|date:"Y-m-d\TH:i:s\Z" }}</span>
                 {% endif %}
             </div>
         </div>

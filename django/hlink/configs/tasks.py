@@ -369,8 +369,7 @@ def email_config_to_moc(
                 "configs/submit_email.html",
                 context={
                     "config": config,
-                    "submission_date": timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                    "timezone": settings.TIME_ZONE,
+                    "submission_date": f"{timestamp.strftime('%Y-%m-%d %H:%M:%S')} ({str(timestamp.tzinfo)})",
                     "files": ", ".join(config.non_null_configs_keys()),
                     "domain": domain,
                     "protocol": protocol,
@@ -449,13 +448,15 @@ def email_uplink_to_soc(
         )
 
     model = config.model
+    submission_date_str = f"{config.submit_time.strftime('%Y-%m-%d %H:%M:%S')} ({str(config.submit_time.tzinfo)})"
+    uplink_date_str = f"{config.uplink_time.strftime('%Y-%m-%d %H:%M:%S')} ({str(config.uplink_time.tzinfo)})"
     email_body = render_to_string(
         "configs/commit_email.html",
         context={
             "config": config,
             "timezone": settings.TIME_ZONE,
-            "submission_date": config.submit_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "uplink_date": config.uplink_time.strftime("%Y-%m-%d %H:%M:%S"),
+            "submission_date": submission_date_str,
+            "uplink_date": uplink_date_str,
             "files": ", ".join(config.non_null_configs_keys()),
             "asic1": True if config.asic1 is not None else False,
             "domain": domain,

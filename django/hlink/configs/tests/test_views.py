@@ -37,6 +37,7 @@ DOWNLOAD VIEW TEST
 """
 
 from io import BytesIO
+from datetime import timezone as datetime_timezone
 from pathlib import Path
 import tarfile
 from time import sleep
@@ -575,6 +576,19 @@ class UplinkViewTest(TestCase):
         self.assertIsInstance(response.context["form"], CommitConfiguration)
         self.assertEqual(response.context["config"], self.config)
 
+    @override_settings(TIME_ZONE="Europe/Rome", USE_TZ=True)
+    def test_commit_view_displays_timestamps_in_utc(self):
+        """Test commit page timestamps are rendered in UTC, not the local timezone."""
+        submit_time = timezone.datetime(2026, 5, 15, 15, 37, 57, tzinfo=datetime_timezone.utc)
+        self.config.date = submit_time
+        self.config.submit_time = submit_time
+        self.config.save()
+
+        response = self.client.get(reverse("configs:commit", args=[self.config.id]))
+
+        self.assertContains(response, "2026-05-15T15:37:57Z", count=2)
+        self.assertNotContains(response, "2026-05-15T17:37:57Z")
+
     def test_commit_view_authentication_required(self):
         """Test that commit view requires authentication"""
         self.client.logout()
@@ -814,6 +828,22 @@ class IndexViewsTest(TestCase):
 
         # Check that all configurations are shown
         self.assertEqual(response.context["page_obj"].paginator.count, 2)
+
+    @override_settings(TIME_ZONE="Europe/Rome", USE_TZ=True)
+    def test_history_view_displays_timestamps_in_utc(self):
+        """Test history timestamps are rendered in UTC, not the local timezone."""
+        submit_time = timezone.datetime(2026, 5, 15, 15, 37, 57, tzinfo=datetime_timezone.utc)
+        uplink_time = timezone.datetime(2026, 5, 15, 16, 37, 57, tzinfo=datetime_timezone.utc)
+        self.uplinked_config.submit_time = submit_time
+        self.uplinked_config.uplink_time = uplink_time
+        self.uplinked_config.save()
+
+        response = self.client.get(reverse("configs:history"))
+
+        self.assertContains(response, "2026-05-15T15:37:57Z")
+        self.assertContains(response, "2026-05-15T16:37:57Z")
+        self.assertNotContains(response, "2026-05-15T17:37:57Z")
+        self.assertNotContains(response, "2026-05-15T18:37:57Z")
 
     def test_history_view_empty(self):
         """Test history view with no configurations"""

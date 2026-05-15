@@ -3,7 +3,7 @@ Dear Mission Operations Team,
 A new configuration for the HERMES {{ config.model }} payload has been submitted by {{ config.author }}.
 
 Configuration ID: {{ config.pk }}
-Submission Date: {{ submission_date }} ({{ timezone }})
+Submission Date: {{ submission_date }}
 Files: {{ files }}
 
 You can commit an uplink time for this configuration at: {{ protocol }}://{{ domain }}{% url 'configs:commit' config_id=config.id %}
