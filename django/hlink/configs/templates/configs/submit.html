@@ -19,7 +19,11 @@
             </div>
             <div class="flex">
                 <div class="w-24 pr-4">{{ form.cc.label_tag }}</div>
-                <div class="flex-1 max-w-[28rem]">{{ form.cc | addclass:"w-full bg-black text-white p-1 border border-white" }}</div>
+                <div class="flex-1 max-w-[28rem]">
+                    {{ form.cc | addclass:"w-full bg-black text-white p-1 border border-white" }}
+                    {% if form.cc.errors %}<div class="text-red-500 text-sm mt-4">{{ form.cc.errors }}</div>{% endif %}
+                    <div class="text-gray-400 text-xs mt-2">Use semicolons to separate multiple addresses, e.g. name@example.com; other@example.com</div>
+                </div>
             </div>
         </div>
 

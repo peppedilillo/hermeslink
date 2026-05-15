@@ -420,6 +420,28 @@ class ConfigurationViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "configs/submit.html")
 
+    def test_submit_view_shows_invalid_cc_feedback(self):
+        """Test invalid CC input is shown to the user without submitting."""
+        invalid_cc_values = [
+            "peppedilillo@gmail.com, prova@libero.it",
+            "invalidemail@lol",
+        ]
+
+        for invalid_cc in invalid_cc_values:
+            with self.subTest(invalid_cc=invalid_cc):
+                Configuration.objects.all().delete()
+                self.login_and_upload_fileset("H6", self.files_fm6)
+                self.client.get(reverse("configs:test"))
+
+                response = self.client.post(reverse("configs:submit"), data={"cc": invalid_cc})
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "configs/submit.html")
+                self.assertIn("cc", response.context["form"].errors)
+                self.assertContains(response, "Some of the addresses in the Cc list are invalid.")
+                self.assertContains(response, "Use semicolons to separate multiple addresses")
+                self.assertFalse(Configuration.objects.exists())
+
     def test_session_cleanup(self):
         """Test session cleanup after submit"""
         _ = self.login_and_upload_fileset("6", self.files_fm6)

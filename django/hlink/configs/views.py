@@ -227,8 +227,9 @@ def submit(request: HttpRequest) -> HttpResponse:
                 )
             logger.info(f"A new configuration with ID {config.id} was submitted by user {request.user.username}.")
             return render(request, "configs/submit_success.html")
+    else:
+        form = forms.SubmitConfiguration()
 
-    form = forms.SubmitConfiguration()
     return render(
         request,
         "configs/submit.html",
