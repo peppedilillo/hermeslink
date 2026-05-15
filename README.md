@@ -23,11 +23,11 @@ vim .django.env # fill
 ... # repeat for other dotfiles
 ```
 
-Check the container name for the hermeslink-web service, get a shell and create a superuser:
+Check the container name for the hermeslink-web service, get a shell, migrate and create a superuser.
 
 ```shell
 docker exec -it hermeslink-web bash
-python manage.py createsuperuser
+bash scripts/init.sh
 ```
 
 ### Production:
